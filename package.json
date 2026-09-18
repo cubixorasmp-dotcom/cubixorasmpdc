@@ -1,11 +1,13 @@
 {
   "name": "cubixorasmpdc",
   "version": "1.0.0",
+  "description": "Cubixorasmp Discord Bot",
   "main": "dcs.js",
   "scripts": {
     "start": "node dcs.js"
   },
   "dependencies": {
-    "discord.js": "^14.14.0"
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
   }
 }
