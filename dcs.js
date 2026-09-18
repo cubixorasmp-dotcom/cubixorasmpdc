@@ -1,4 +1,4 @@
-Require("dotenv").config();
+require("dotenv").config();
 
 const {
   Client,
@@ -454,5 +454,4 @@ client.on("interactionCreate", async interaction => {
 process.on("unhandledRejection", err => console.log("Unhandled rejection:", err.message));
 process.on("uncaughtException", err => console.log("Uncaught exception:", err.message));
 
-// Token'ı açık yazmak yerine güvenli bir şekilde process.env üzerinden alıyoruz:
 client.login(process.env.TOKEN);
