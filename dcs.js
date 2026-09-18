@@ -1,4 +1,4 @@
-require("dotenv").config();
+Require("dotenv").config();
 
 const {
   Client,
@@ -86,7 +86,7 @@ function durationText(ms) {
   return `${Math.floor(totalSeconds / 2592000)} ay`;
 }
 
-async function muteMember(member, duration, reason, moderator = null) {
+async function muteMember(member, duration, reason) {
   if (!member || !member.moderatable) return false;
 
   try {
@@ -160,7 +160,6 @@ client.once("ready", async () => {
 
 client.on("guildMemberAdd", async member => {
   const settings = getConfig(member.guild.id);
-
   if (!settings.welcomeChannel) return;
 
   const channel = member.guild.channels.cache.get(settings.welcomeChannel);
@@ -182,7 +181,6 @@ client.on("guildMemberAdd", async member => {
 
 client.on("guildMemberRemove", async member => {
   const settings = getConfig(member.guild.id);
-
   if (!settings.goodbyeChannel) return;
 
   const channel = member.guild.channels.cache.get(settings.goodbyeChannel);
@@ -208,12 +206,10 @@ client.on("messageCreate", async message => {
   const content = message.content.trim();
   const lower = content.toLowerCase();
 
-  // Selamlaşma
   if (["sa", "s.a", "selam", "selamün aleyküm", "selamun aleykum"].includes(lower)) {
     return message.reply("Aleyküm Selam, hoş geldin! 👋");
   }
 
-  // Kelime oyunu
   if (settings.wordChannel === message.channel.id) {
     if (!wordGames.has(message.guild.id)) {
       wordGames.set(message.guild.id, {
@@ -247,7 +243,6 @@ client.on("messageCreate", async message => {
     return;
   }
 
-  // Prefix komutları
   if (!content.startsWith(PREFIX)) return;
 
   const args = content.slice(PREFIX.length).trim().split(/\s+/);
@@ -276,17 +271,11 @@ client.on("messageCreate", async message => {
       .addFields(
         {
           name: "☕ Java Edition",
-          value:
-            `IP: \`${MC_IP}\`\n` +
-            `Port: \`${MC_JAVA_PORT}\`\n` +
-            `Versiyon: \`1.16.5 - 1.26.2\``
+          value: `IP: \`${MC_IP}\`\nPort: \`${MC_JAVA_PORT}\`\nVersiyon: \`1.16.5 - 1.26.2\``
         },
         {
           name: "📱 Bedrock Edition",
-          value:
-            `IP: \`${MC_IP}\`\n` +
-            `Port: \`${MC_BEDROCK_PORT}\`\n` +
-            `Versiyon: \`1.26+\``
+          value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nVersiyon: \`1.26+\``
         }
       )
       .setFooter({ text: `${BOT_NAME} • Minecraft Sunucu` })
@@ -296,28 +285,20 @@ client.on("messageCreate", async message => {
   }
 
   if (command === "kelime-kanal") {
-    if (!hasAdmin(message.member)) {
-      return message.reply("Bu komutu kullanmak için yetkin yok.");
-    }
+    if (!hasAdmin(message.member)) return message.reply("Bu komutu kullanmak için yetkin yok.");
 
     const target = message.mentions.channels.first() || message.guild.channels.cache.get(args[0]?.replace(/[<#>]/g, "") || "");
-    if (!target) {
-      return message.reply("Kullanım: `!kelime-kanal #kanal`");
-    }
+    if (!target) return message.reply("Kullanım: `!kelime-kanal #kanal`");
 
     settings.wordChannel = target.id;
     return message.reply(`✅ Kelime oyunu kanalı ${target} olarak ayarlandı.`);
   }
 
   if (command === "owner-ekle") {
-    if (!hasAdmin(message.member)) {
-      return message.reply("Bu komutu kullanmak için yetkin yok.");
-    }
+    if (!hasAdmin(message.member)) return message.reply("Bu komutu kullanmak için yetkin yok.");
 
     const target = message.mentions.members.first();
-    if (!target) {
-      return message.reply("Kullanım: `!owner-ekle @kullanıcı`");
-    }
+    if (!target) return message.reply("Kullanım: `!owner-ekle @kullanıcı`");
 
     const list = owners.get(message.guild.id) || [];
     if (!list.includes(target.id)) {
@@ -329,31 +310,22 @@ client.on("messageCreate", async message => {
   }
 
   if (command === "owner-cikar" || command === "owner-çıkar") {
-    if (!hasAdmin(message.member)) {
-      return message.reply("Bu komutu kullanmak için yetkin yok.");
-    }
+    if (!hasAdmin(message.member)) return message.reply("Bu komutu kullanmak için yetkin yok.");
 
     const target = message.mentions.members.first();
-    if (!target) {
-      return message.reply("Kullanım: `!owner-cikar @kullanıcı`");
-    }
+    if (!target) return message.reply("Kullanım: `!owner-cikar @kullanıcı`");
 
     const list = owners.get(message.guild.id) || [];
-    const newList = list.filter(id => id !== target.id);
-    owners.set(message.guild.id, newList);
+    owners.set(message.guild.id, list.filter(id => id !== target.id));
 
     return message.reply(`✅ ${target} owner listesinden çıkarıldı.`);
   }
 
   if (command === "owner-list") {
     const list = owners.get(message.guild.id) || [];
-    if (!list.length) {
-      return message.reply("Owner listesi boş.");
-    }
+    if (!list.length) return message.reply("Owner listesi boş.");
 
-    return message.reply(
-      `👑 Owner listesi:\n${list.map(id => `<@${id}>`).join("\n")}`
-    );
+    return message.reply(`👑 Owner listesi:\n${list.map(id => `<@${id}>`).join("\n")}`);
   }
 
   if (command === "mute") {
@@ -365,14 +337,10 @@ client.on("messageCreate", async message => {
     const duration = parseDuration(args[1] || "30m");
     const reason = args.slice(2).join(" ") || "Sebep belirtilmedi";
 
-    if (!target || !duration) {
-      return message.reply("Kullanım: `!mute @kullanıcı 30m sebep`");
-    }
+    if (!target || !duration) return message.reply("Kullanım: `!mute @kullanıcı 30m sebep`");
 
-    const ok = await muteMember(target, duration, reason, message.member);
-    if (ok) {
-      return message.reply(`🔇 ${target} **${durationText(duration)}** susturuldu.`);
-    }
+    const ok = await muteMember(target, duration, reason);
+    if (ok) return message.reply(`🔇 ${target} **${durationText(duration)}** susturuldu.`);
 
     return message.reply("Bu üyeyi susturamıyorum.");
   }
@@ -445,17 +413,11 @@ client.on("interactionCreate", async interaction => {
       .addFields(
         {
           name: "☕ Java Edition",
-          value:
-            `IP: \`${MC_IP}\`\n` +
-            `Port: \`${MC_JAVA_PORT}\`\n` +
-            `Versiyon: \`1.16.5 - 1.26.2\``
+          value: `IP: \`${MC_IP}\`\nPort: \`${MC_JAVA_PORT}\`\nVersiyon: \`1.16.5 - 1.26.2\``
         },
         {
           name: "📱 Bedrock Edition",
-          value:
-            `IP: \`${MC_IP}\`\n` +
-            `Port: \`${MC_BEDROCK_PORT}\`\n` +
-            `Versiyon: \`1.26+\``
+          value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nVersiyon: \`1.26+\``
         }
       )
       .setFooter({ text: `${BOT_NAME} • Minecraft Sunucu` })
@@ -465,54 +427,32 @@ client.on("interactionCreate", async interaction => {
   }
 
   if (interaction.commandName === "kelime-kanal") {
-    if (!hasAdmin(member)) {
-      return interaction.reply({
-        content: "Bu komutu kullanmak için yetkin yok.",
-        ephemeral: true
-      });
-    }
+    if (!hasAdmin(member)) return interaction.reply({ content: "Bu komutu kullanmak için yetkin yok.", ephemeral: true });
 
     const channel = interaction.options.getChannel("kanal");
     settings.wordChannel = channel.id;
-
     return interaction.reply(`✅ Kelime oyunu kanalı ${channel} olarak ayarlandı.`);
   }
 
   if (interaction.commandName === "hosgeldin-kanal") {
-    if (!hasAdmin(member)) {
-      return interaction.reply({
-        content: "Bu komutu kullanmak için yetkin yok.",
-        ephemeral: true
-      });
-    }
+    if (!hasAdmin(member)) return interaction.reply({ content: "Bu komutu kullanmak için yetkin yok.", ephemeral: true });
 
     const channel = interaction.options.getChannel("kanal");
     settings.welcomeChannel = channel.id;
-
     return interaction.reply(`✅ Hoşgeldin kanalı ${channel} olarak ayarlandı.`);
   }
 
   if (interaction.commandName === "gulegule-kanal") {
-    if (!hasAdmin(member)) {
-      return interaction.reply({
-        content: "Bu komutu kullanmak için yetkin yok.",
-        ephemeral: true
-      });
-    }
+    if (!hasAdmin(member)) return interaction.reply({ content: "Bu komutu kullanmak için yetkin yok.", ephemeral: true });
 
     const channel = interaction.options.getChannel("kanal");
     settings.goodbyeChannel = channel.id;
-
     return interaction.reply(`✅ Güle güle kanalı ${channel} olarak ayarlandı.`);
   }
 });
 
-process.on("unhandledRejection", err => {
-  console.log("Unhandled rejection:", err.message);
-});
+process.on("unhandledRejection", err => console.log("Unhandled rejection:", err.message));
+process.on("uncaughtException", err => console.log("Uncaught exception:", err.message));
 
-process.on("uncaughtException", err => {
-  console.log("Uncaught exception:", err.message);
-});
-
-client.login("MTU1MDUxMTM0NDIzMzQ4NDQwMA.GHWbAN.ZfpVQwvj0n5T4DPrZ4lHa9jpetC-RaHPDlP2Uo");
+// Token'ı açık yazmak yerine güvenli bir şekilde process.env üzerinden alıyoruz:
+client.login(process.env.TOKEN);
