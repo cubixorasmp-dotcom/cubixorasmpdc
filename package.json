@@ -1,7 +1,6 @@
 {
-  "name": "cubixorasmp-bot",
+  "name": "cubixorasmp",
   "version": "1.0.0",
-  "description": "Discord Bot",
   "main": "dcs.js",
   "scripts": {
     "start": "node dcs.js"
