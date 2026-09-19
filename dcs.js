@@ -556,11 +556,20 @@ client.on("interactionCreate", async interaction => {
       });
 
       const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("claim_ticket").setLabel("Talebi Üstlen").setStyle(ButtonStyle.Success).setEmoji("🙋‍♂️"),
         new ButtonBuilder().setCustomId("close_ticket").setLabel("Talebi Kapat").setStyle(ButtonStyle.Danger).setEmoji("🔒")
       );
       
-      await ticketChan.send({ content: `${interaction.user} <@&${roleId}>`, components: [row] });
+      await ticketChan.send({ 
+        content: `👋 Merhaba ${interaction.user}! <@&${roleId}> ekibimiz (en güvendiğiniz, cana yakın ve çalışkan kadromuz) seninle ilgilenmek için birazdan burada olacak.\n🚀 **Çok yakında harika yenilikler ve sürprizlerle geliyoruz, takipte kalın!**`, 
+        components: [row] 
+      });
+      
       return interaction.editReply({ content: `✅ Destek odan açıldı: ${ticketChan}` });
+    }
+
+    if (interaction.customId === "claim_ticket") {
+      await interaction.reply({ content: `🙋‍♂️ Bu destek talebi **${interaction.user.tag}** tarafından üstlenildi!` });
     }
 
     if (interaction.customId === "close_ticket") {
