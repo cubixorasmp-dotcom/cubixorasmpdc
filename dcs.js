@@ -43,7 +43,7 @@ const MC_BEDROCK_PORT = 19132;
 const JAVA_VERSION = "1.16.5 - 26.2";
 const BEDROCK_VERSION = "1.26+";
 
-// Rastgele çalınacak varsayılan şarkı havuzu (İstediğin YouTube linklerini veya şarkı adlarını ekleyebilirsin)
+// Rastgele çalınacak varsayılan şarkı havuzu (İstediğin YouTube linklerini buraya ekleyebilirsin)
 const randomPlaylist = [
   "https://www.youtube.com/watch?v=5qap5aO4i9A", // Örnek lofi
   "https://www.youtube.com/watch?v=jfKfPfyJRdk", // Örnek lofi 2
@@ -68,28 +68,6 @@ function getSettings(guildId) {
   return guildSettings.get(guildId);
 }
 
-function getOwners(guildId) {
-  if (!guildOwners.has(guildId)) {
-    guildOwners.set(guildId, []);
-  }
-  return guildOwners.get(guildId);
-}
-
-function parseDuration(text) {
-  if (!text) return null;
-  const match = text.toLowerCase().match(/^(\d+)(s|sn|m|dk|h|sa|d|g)$/);
-  if (!match) return null;
-  const number = Number(match[1]);
-  const unit = match[2];
-  const map = {
-    s: 1000, sn: 1000,
-    m: 60 * 1000, dk: 60 * 1000,
-    h: 60 * 60 * 1000, sa: 60 * 60 * 1000,
-    d: 24 * 60 * 60 * 1000, g: 24 * 60 * 60 * 1000
-  };
-  return number * (map[unit] || 1000);
-}
-
 const slashCommands = [
   new SlashCommandBuilder().setName("ip").setDescription("Sunucu IP ve Sürüm bilgilerini gösterir"),
   new SlashCommandBuilder().setName("restart").setDescription("Botu yeniden başlatır (Yalnızca Yöneticiler)"),
@@ -100,24 +78,12 @@ const slashCommands = [
   new SlashCommandBuilder().setName("mcsohbet").setDescription("Minecraft sohbet/giriş-çıkış log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("yapayzrakakal").setDescription("Yapay zeka sohbet kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   
-  new SlashCommandBuilder().setName("owner-ekle").setDescription("Sunucuya yeni bir owner ekler").addUserOption(o => o.setName("uye").setDescription("Owner yapılacak üye").setRequired(true)),
-  new SlashCommandBuilder().setName("owner-çıkar").setDescription("Sunucudaki bir owner'ı çıkarır").addUserOption(o => o.setName("uye").setDescription("Ownerlıktan çıkarılacak üye").setRequired(true)),
-  new SlashCommandBuilder().setName("owner-list").setDescription("Sunucudaki owner'ları listeler"),
-
-  new SlashCommandBuilder().setName("korma-ekle").setDescription("Korunacak rolü sisteme ekler").addRoleOption(o => o.setName("rol").setDescription("Korunacak Rol").setRequired(true)),
-  new SlashCommandBuilder().setName("korma-cikar").setDescription("Korunacak rolü sistemden çıkarır").addRoleOption(o => o.setName("rol").setDescription("Kaldırılacak Rol").setRequired(true)),
-  new SlashCommandBuilder().setName("korma-list").setDescription("Korumalı rolleri listeler"),
-
-  new SlashCommandBuilder().setName("ticket-kur")
-    .setDescription("Ticket sistemi kurar")
-    .addChannelOption(o => o.setName("kanal").setDescription("Kurulacak Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true))
-    .addRoleOption(o => o.setName("yetkili-rol").setDescription("Ticketlara bakacak yetkili rolü").setRequired(true))
-    .addStringOption(o => o.setName("baslik").setDescription("Ticket Panel Başlığı").setRequired(true))
-    .addStringOption(o => o.setName("aciklama").setDescription("Ticket Panel Açıklaması").setRequired(true)),
-
   new SlashCommandBuilder().setName("müzikpanelyarat").setDescription("Butonlu müzik kontrol paneli kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("panelacmezük").setDescription("Ses kanalına katılıp otomatik rastgele müzik çalmaya başlayan özel panel kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)).addStringOption(o => o.setName("şarkı").setDescription("Özel şarkı (Boş bırakırsan rastgele çalar)").setRequired(false)),
-  new SlashCommandBuilder().setName("çal").setDescription("Müzik çalar").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki").setRequired(true)),
+  
+  // BURASI GÜNCELLENDİ: "şarkı" opsiyonu artık zorunlu değil (setRequired(false))
+  new SlashCommandBuilder().setName("çal").setDescription("Müzik çalar (Boş bırakılırsa rastgele çalar)").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki (İsteğe bağlı)").setRequired(false)),
+  
   new SlashCommandBuilder().setName("durdur").setDescription("Çalan müziği durdurur/oynatır"),
   new SlashCommandBuilder().setName("ayrıl").setDescription("Botu ses kanalından çıkarır")
 ];
@@ -259,24 +225,12 @@ client.on("messageCreate", async message => {
       return message.reply("❌ Ses kanalına bağlanırken bir hata oluştu.");
     }
   }
-
-  if (command === "ip") {
-    const embed = new EmbedBuilder()
-      .setColor(0x2ecc71)
-      .setTitle("🌍 CubixoraSMP IP ve Sürüm Bilgisi")
-      .addFields(
-        { name: "☕ Java Sürüm & IP", value: `IP: \`${MC_IP}\`\nSürüm: \`${JAVA_VERSION}\`` },
-        { name: "📱 Bedrock Sürüm, IP & Port", value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nSürüm: \`${BEDROCK_VERSION}\`` }
-      );
-    return message.reply({ embeds: [embed] });
-  }
 });
 
 client.on("interactionCreate", async interaction => {
   if (interaction.isChatInputCommand()) {
     const guild = interaction.guild;
     const member = interaction.member;
-    const settings = getSettings(guild.id);
 
     if (interaction.commandName === "restart") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
@@ -337,11 +291,17 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: `✅ Otomatik rastgele müzik paneli ${channel} kanalına kuruldu!`, ephemeral: true });
     }
 
+    // /çal KOMUTU GÜNCELLENDİ
     if (interaction.commandName === "çal") {
       const channel = member.voice.channel;
       if (!channel) return interaction.reply({ content: "❌ Önce bir ses kanalına girmelisin!", ephemeral: true });
 
-      const query = interaction.options.getString("şarkı");
+      // Eğer kullanıcı şarkı adı yazmadıysa rastgele listeden seç
+      let query = interaction.options.getString("şarkı");
+      if (!query) {
+        query = randomPlaylist[Math.floor(Math.random() * randomPlaylist.length)];
+      }
+
       await interaction.deferReply();
 
       try {
@@ -358,6 +318,16 @@ client.on("interactionCreate", async interaction => {
         connection.subscribe(player);
         player.play(resource);
         client.activeAudioPlayer = player;
+
+        // Şarkı bittiğinde otomatik olarak başka bir rastgele şarkıya geç
+        player.on(AudioPlayerStatus.Idle, () => {
+          try {
+            const nextQuery = randomPlaylist[Math.floor(Math.random() * randomPlaylist.length)];
+            const newStream = ytdl(nextQuery, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+            const newResource = createAudioResource(newStream);
+            player.play(newResource);
+          } catch {}
+        });
 
         return interaction.editReply(`🎶 Çalınıyor: **${query}**`);
       } catch (e) {
@@ -420,7 +390,6 @@ client.on("interactionCreate", async interaction => {
 
       await interaction.deferReply({ ephemeral: true });
 
-      // Eğer rastgele seçilmesi istendiyse listeden rastgele bir şarkı çek
       if (query === "rastgele" || !query) {
         query = randomPlaylist[Math.floor(Math.random() * randomPlaylist.length)];
       }
@@ -440,7 +409,6 @@ client.on("interactionCreate", async interaction => {
         player.play(resource);
         client.activeAudioPlayer = player;
 
-        // Şarkı bittiğinde listeden tekrar rastgele başka bir şarkıya geçiş yap (Otomatik Döngü)
         player.on(AudioPlayerStatus.Idle, () => {
           try {
             const nextQuery = randomPlaylist[Math.floor(Math.random() * randomPlaylist.length)];
