@@ -1,6 +1,6 @@
-require("dotenv").config();
+Require("dotenv").config();
 
-const {
+Const {
   Client,
   GatewayIntentBits,
   Partials,
@@ -14,17 +14,31 @@ const {
   ButtonStyle
 } = require("discord.js");
 
-const { 
-  joinVoiceChannel, 
-  createAudioPlayer, 
-  createAudioResource,
+Const { 
+  JoinVoiceChannel, 
+  CreateAudioPlayer, 
+  CreateAudioResource,
   AudioPlayerStatus 
 } = require("@discordjs/voice");
 const ytdl = require("@distube/ytdl-core");
 const util = require("minecraft-server-util");
+const express = require("express"); // 🌐 HTTP sunucusu için eklendi
 
-const client = new Client({
-  intents: [
+// --- 7/24 PİNG (EXPRESS) SUNUCUSU ---
+Const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  Res.send("🤖 Cubixorasmp Bot 7/24 aktif ve çalışıyor!");
+});
+
+app.listen(PORT, () => {
+  Console.log(`🌐 HTTP sunucusu ${PORT} portunda çalışıyor.`);
+});
+// ------------------------------------
+
+Const client = new Client({
+  Intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
@@ -32,24 +46,24 @@ const client = new Client({
     GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildVoiceStates
   ],
-  partials: [Partials.Message, Partials.Channel, Partials.GuildMember]
+  Partials: [Partials.Message, Partials.Channel, Partials.GuildMember]
 });
 
-const PREFIX = "e!";
-const BOT_NAME = "Cubixorasmp";
+Const PREFIX = "e!";
+Const BOT_NAME = "Cubixorasmp";
 
-const MC_IP = "cubixorasmp.play.hosting";
+Const MC_IP = "cubixorasmp.play.hosting";
 const MC_BEDROCK_PORT = 19132;
 const JAVA_VERSION = "1.16.5 - 26.2";
 const BEDROCK_VERSION = "1.26+";
 
-const guildSettings = new Map();
+Const guildSettings = new Map();
 const guildOwners = new Map();
 
-function getSettings(guildId) {
-  if (!guildSettings.has(guildId)) {
-    guildSettings.set(guildId, {
-      welcomeChannel: null,
+Function getSettings(guildId) {
+  If (!guildSettings.has(guildId)) {
+    GuildSettings.set(guildId, {
+      WelcomeChannel: null,
       goodbyeChannel: null,
       dcCezaChannel: null,
       mcCezaChannel: null,
@@ -58,143 +72,143 @@ function getSettings(guildId) {
       protectedRoles: []
     });
   }
-  return guildSettings.get(guildId);
+  Return guildSettings.get(guildId);
 }
 
-function getOwners(guildId) {
-  if (!guildOwners.has(guildId)) {
-    guildOwners.set(guildId, []);
+Function getOwners(guildId) {
+  If (!guildOwners.has(guildId)) {
+    GuildOwners.set(guildId, []);
   }
-  return guildOwners.get(guildId);
+  Return guildOwners.get(guildId);
 }
 
-function parseDuration(text) {
-  if (!text) return null;
-  const match = text.toLowerCase().match(/^(\d+)(s|sn|m|dk|h|sa|d|g)$/);
-  if (!match) return null;
-  const number = Number(match[1]);
-  const unit = match[2];
-  const map = {
-    s: 1000, sn: 1000,
-    m: 60 * 1000, dk: 60 * 1000,
-    h: 60 * 60 * 1000, sa: 60 * 60 * 1000,
-    d: 24 * 60 * 60 * 1000, g: 24 * 60 * 60 * 1000
+Function parseDuration(text) {
+  If (!text) return null;
+  Const match = text.toLowerCase().match(/^(\d+)(s|sn|m|dk|h|sa|d|g)$/);
+  If (!match) return null;
+  Const number = Number(match[1]);
+  Const unit = match[2];
+  Const map = {
+    S: 1000, sn: 1000,
+    M: 60 * 1000, dk: 60 * 1000,
+    H: 60 * 60 * 1000, sa: 60 * 60 * 1000,
+    D: 24 * 60 * 60 * 1000, g: 24 * 60 * 60 * 1000
   };
-  return number * (map[unit] || 1000);
+  Return number * (map[unit] || 1000);
 }
 
-const slashCommands = [
-  new SlashCommandBuilder().setName("ip").setDescription("Sunucu IP ve Sürüm bilgilerini gösterir"),
-  new SlashCommandBuilder().setName("restart").setDescription("Botu yeniden başlatır (Yalnızca Yöneticiler)"),
-  new SlashCommandBuilder().setName("hoşgeldin-kanal").setDescription("Hoşgeldin kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
-  new SlashCommandBuilder().setName("gülegüle-kanal").setDescription("Güle güle kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
-  new SlashCommandBuilder().setName("dc-ceza").setDescription("Discord ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
-  new SlashCommandBuilder().setName("mc-ceza").setDescription("Minecraft ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
-  new SlashCommandBuilder().setName("mcsohbet").setDescription("Minecraft sohbet/giriş-çıkış log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
-  new SlashCommandBuilder().setName("yapayzrakakal").setDescription("Yapay zeka sohbet kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+Const slashCommands = [
+  New SlashCommandBuilder().setName("ip").setDescription("Sunucu IP ve Sürüm bilgilerini gösterir"),
+  New SlashCommandBuilder().setName("restart").setDescription("Botu yeniden başlatır (Yalnızca Yöneticiler)"),
+  New SlashCommandBuilder().setName("hoşgeldin-kanal").setDescription("Hoşgeldin kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  New SlashCommandBuilder().setName("gülegüle-kanal").setDescription("Güle güle kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  New SlashCommandBuilder().setName("dc-ceza").setDescription("Discord ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  New SlashCommandBuilder().setName("mc-ceza").setDescription("Minecraft ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  New SlashCommandBuilder().setName("mcsohbet").setDescription("Minecraft sohbet/giriş-çıkış log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  New SlashCommandBuilder().setName("yapayzrakakal").setDescription("Yapay zeka sohbet kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   
-  new SlashCommandBuilder().setName("owner-ekle").setDescription("Sunucuya yeni bir owner ekler").addUserOption(o => o.setName("uye").setDescription("Owner yapılacak üye").setRequired(true)),
-  new SlashCommandBuilder().setName("owner-çıkar").setDescription("Sunucudaki bir owner'ı çıkarır").addUserOption(o => o.setName("uye").setDescription("Ownerlıktan çıkarılacak üye").setRequired(true)),
-  new SlashCommandBuilder().setName("owner-list").setDescription("Sunucudaki owner'ları listeler"),
+  New SlashCommandBuilder().setName("owner-ekle").setDescription("Sunucuya yeni bir owner ekler").addUserOption(o => o.setName("uye").setDescription("Owner yapılacak üye").setRequired(true)),
+  New SlashCommandBuilder().setName("owner-çıkar").setDescription("Sunucudaki bir owner'ı çıkarır").addUserOption(o => o.setName("uye").setDescription("Ownerlıktan çıkarılacak üye").setRequired(true)),
+  New SlashCommandBuilder().setName("owner-list").setDescription("Sunucudaki owner'ları listeler"),
 
-  new SlashCommandBuilder().setName("korma-ekle").setDescription("Korunacak rolü sisteme ekler").addRoleOption(o => o.setName("rol").setDescription("Korunacak Rol").setRequired(true)),
-  new SlashCommandBuilder().setName("korma-cikar").setDescription("Korunacak rolü sistemden çıkarır").addRoleOption(o => o.setName("rol").setDescription("Kaldırılacak Rol").setRequired(true)),
-  new SlashCommandBuilder().setName("korma-list").setDescription("Korumalı rolleri listeler"),
+  New SlashCommandBuilder().setName("korma-ekle").setDescription("Korunacak rolü sisteme ekler").addRoleOption(o => o.setName("rol").setDescription("Korunacak Rol").setRequired(true)),
+  New SlashCommandBuilder().setName("korma-cikar").setDescription("Korunacak rolü sistemden çıkarır").addRoleOption(o => o.setName("rol").setDescription("Kaldırılacak Rol").setRequired(true)),
+  New SlashCommandBuilder().setName("korma-list").setDescription("Korumalı rolleri listeler"),
 
-  new SlashCommandBuilder().setName("ticket-kur")
+  New SlashCommandBuilder().setName("ticket-kur")
     .setDescription("Ticket sistemi kurar")
     .addChannelOption(o => o.setName("kanal").setDescription("Kurulacak Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true))
     .addRoleOption(o => o.setName("yetkili-rol").setDescription("Ticketlara bakacak yetkili rolü").setRequired(true))
     .addStringOption(o => o.setName("baslik").setDescription("Ticket Panel Başlığı").setRequired(true))
     .addStringOption(o => o.setName("aciklama").setDescription("Ticket Panel Açıklaması").setRequired(true)),
 
-  new SlashCommandBuilder().setName("müzikpanelyarat").setDescription("Butonlu müzik kontrol paneli kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
-  new SlashCommandBuilder().setName("panelacmezük").setDescription("Ses kanalına katılıp otomatik müzik çalmaya başlayan özel panel kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)).addStringOption(o => o.setName("şarkı").setDescription("Çalınacak şarkı adı veya linki").setRequired(true)),
-  new SlashCommandBuilder().setName("çal").setDescription("Müzik çalar").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki").setRequired(true)),
-  new SlashCommandBuilder().setName("durdur").setDescription("Çalan müziği durdurur/oynatır"),
-  new SlashCommandBuilder().setName("ayrıl").setDescription("Botu ses kanalından çıkarır")
+  New SlashCommandBuilder().setName("müzikpanelyarat").setDescription("Butonlu müzik kontrol paneli kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  New SlashCommandBuilder().setName("panelacmezük").setDescription("Ses kanalına katılıp otomatik müzik çalmaya başlayan özel panel kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)).addStringOption(o => o.setName("şarkı").setDescription("Çalınacak şarkı adı veya linki").setRequired(true)),
+  New SlashCommandBuilder().setName("çal").setDescription("Müzik çalar").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki").setRequired(true)),
+  New SlashCommandBuilder().setName("durdur").setDescription("Çalan müziği durdurur/oynatır"),
+  New SlashCommandBuilder().setName("ayrıl").setDescription("Botu ses kanalından çıkarır")
 ];
 
-client.once("ready", async () => {
-  console.log(`${BOT_NAME} aktif!`);
-  client.user.setPresence({
-    activities: [{ name: "CubixoraSMP | !ip ve !aktif", type: ActivityType.Watching }],
-    status: "online"
+Client.once("ready", async () => {
+  Console.log(`${BOT_NAME} aktif!`);
+  Client.user.setPresence({
+    Activities: [{ name: "CubixoraSMP | !ip ve !aktif", type: ActivityType.Watching }],
+    Status: "online"
   });
 
-  for (const guild of client.guilds.cache.values()) {
-    try {
-      await guild.commands.set(slashCommands.map(c => c.toJSON()));
+  For (const guild of client.guilds.cache.values()) {
+    Try {
+      Await guild.commands.set(slashCommands.map(c => c.toJSON()));
     } catch {}
   }
 });
 
-client.on("guildMemberAdd", async member => {
-  const settings = getSettings(member.guild.id);
-  if (settings.mcSohbetChannel) {
-    const channel = member.guild.channels.cache.get(settings.mcSohbetChannel);
-    if (channel) channel.send(`🎮 [Sunucu] **${member.user.tag}** sunucuya katıldı! (Bedrock/Java Giriş)`);
+Client.on("guildMemberAdd", async member => {
+  Const settings = getSettings(member.guild.id);
+  If (settings.mcSohbetChannel) {
+    Const channel = member.guild.channels.cache.get(settings.mcSohbetChannel);
+    If (channel) channel.send(`🎮 [Sunucu] **${member.user.tag}** sunucuya katıldı! (Bedrock/Java Giriş)`);
   }
-  if (!settings.welcomeChannel) return;
-  const channel = member.guild.channels.cache.get(settings.welcomeChannel);
-  if (!channel) return;
+  If (!settings.welcomeChannel) return;
+  Const channel = member.guild.channels.cache.get(settings.welcomeChannel);
+  If (!channel) return;
 
-  const embed = new EmbedBuilder()
+  Const embed = new EmbedBuilder()
     .setColor(0x57f287)
     .setTitle("👋 Hoş Geldin!")
     .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
     .setDescription(`**${member.user.tag}** sunucumuza hoş geldin!\n\nToplam üye: **${member.guild.memberCount}**`)
     .setFooter({ text: `${BOT_NAME} • Hoşgeldin` })
     .setTimestamp();
-  channel.send({ embeds: [embed] });
+  Channel.send({ embeds: [embed] });
 });
 
-client.on("guildMemberRemove", async member => {
-  const settings = getSettings(member.guild.id);
-  if (settings.mcSohbetChannel) {
-    const channel = member.guild.channels.cache.get(settings.mcSohbetChannel);
-    if (channel) channel.send(`🎮 [Sunucu] **${member.user.tag}** sunucudan ayrıldı.`);
+Client.on("guildMemberRemove", async member => {
+  Const settings = getSettings(member.guild.id);
+  If (settings.mcSohbetChannel) {
+    Const channel = member.guild.channels.cache.get(settings.mcSohbetChannel);
+    If (channel) channel.send(`🎮 [Sunucu] **${member.user.tag}** sunucudan ayrıldı.`);
   }
-  if (!settings.goodbyeChannel) return;
-  const channel = member.guild.channels.cache.get(settings.goodbyeChannel);
-  if (!channel) return;
+  If (!settings.goodbyeChannel) return;
+  Const channel = member.guild.channels.cache.get(settings.goodbyeChannel);
+  If (!channel) return;
 
-  const embed = new EmbedBuilder()
+  Const embed = new EmbedBuilder()
     .setColor(0xed4245)
     .setTitle("👋 Güle Güle!")
     .setDescription(`**${member.user.tag}** sunucudan ayrıldı.\n\nKalan üye: **${member.guild.memberCount}**`)
     .setFooter({ text: `${BOT_NAME} • Güle Güle` })
     .setTimestamp();
-  channel.send({ embeds: [embed] });
+  Channel.send({ embeds: [embed] });
 });
 
-client.on("messageCreate", async message => {
-  if (!message.guild || message.author.bot) return;
-  const settings = getSettings(message.guild.id);
-  const content = message.content;
-  const lower = content.toLowerCase().trim();
+Client.on("messageCreate", async message => {
+  If (!message.guild || message.author.bot) return;
+  Const settings = getSettings(message.guild.id);
+  Const content = message.content;
+  Const lower = content.toLowerCase().trim();
 
-  if (settings.aiChannel && message.channel.id === settings.aiChannel) {
-    const responses = [
+  If (settings.aiChannel && message.channel.id === settings.aiChannel) {
+    Const responses = [
       "Anladım, bu konuda sana katılıyorum! 🤖",
       "Gerçekten mi? Harika bir düşünce! ✨",
       "CubixoraSMP sunucumuz için en iyisini yapmaya devam ediyoruz! 🚀",
       `Hmm, ${message.author.username}, bunu biraz daha açar mısın? 🤔`,
       "Bunu duyduğuma sevindim! Başka nasıl yardımcı olabilirim? 💡"
     ];
-    const randomResp = responses[Math.floor(Math.random() * responses.length)];
-    return message.reply(randomResp);
+    Const randomResp = responses[Math.floor(Math.random() * responses.length)];
+    Return message.reply(randomResp);
   }
 
-  if (["sa", "s.a", "selam", "selamün aleyküm", "selamun aleykum", "selamin aleykum"].includes(lower)) {
-    return message.reply("Aleyküm Selam, hoş geldin! 👋");
+  If (["sa", "s.a", "selam", "selamün aleyküm", "selamun aleykum", "selamin aleykum"].includes(lower)) {
+    Return message.reply("Aleyküm Selam, hoş geldin! 👋");
   }
 
-  if (lower === "!aktif") {
-    const loadingMsg = await message.reply("🔍 Minecraft sunucu durumu kontrol ediliyor...");
-    try {
-      const response = await util.status(MC_IP, 25565, { timeout: 3000 });
-      const embed = new EmbedBuilder()
+  If (lower === "!aktif") {
+    Const loadingMsg = await message.reply("🔍 Minecraft sunucu durumu kontrol ediliyor...");
+    Try {
+      Const response = await util.status(MC_IP, 25565, { timeout: 3000 });
+      Const embed = new EmbedBuilder()
         .setColor(0x2ecc71)
         .setTitle("🟢 CubixoraSMP — Sunucu Durumu")
         .addFields(
@@ -206,9 +220,9 @@ client.on("messageCreate", async message => {
         )
         .setFooter({ text: `${BOT_NAME} • Canlı Sunucu Durumu` })
         .setTimestamp();
-      return loadingMsg.edit({ content: null, embeds: [embed] });
+      Return loadingMsg.edit({ content: null, embeds: [embed] });
     } catch (e) {
-      const embed = new EmbedBuilder()
+      Const embed = new EmbedBuilder()
         .setColor(0xed4245)
         .setTitle("🔴 CubixoraSMP — Sunucu Durumu")
         .addFields(
@@ -218,450 +232,450 @@ client.on("messageCreate", async message => {
         )
         .setFooter({ text: `${BOT_NAME} • Sunucu Kapalı` })
         .setTimestamp();
-      return loadingMsg.edit({ content: null, embeds: [embed] });
+      Return loadingMsg.edit({ content: null, embeds: [embed] });
     }
   }
 
-  let usedPrefix = content.startsWith(PREFIX) ? PREFIX : (content.startsWith("!") ? "!" : null);
-  if (!usedPrefix) return;
+  Let usedPrefix = content.startsWith(PREFIX) ? PREFIX : (content.startsWith("!") ? "!" : null);
+  If (!usedPrefix) return;
 
-  const args = content.slice(usedPrefix.length).trim().split(/\s+/);
-  const command = args.shift()?.toLowerCase();
+  Const args = content.slice(usedPrefix.length).trim().split(/\s+/);
+  Const command = args.shift()?.toLowerCase();
 
-  if (command === "sil") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("❌ Bu komut için Mesajları Yönet yetkin olmalı.");
-    const count = parseInt(args[0]);
-    if (!count || count < 1 || count > 100) return message.reply("⚠️ Lütfen 1 ile 100 arasında bir sayı gir.");
-    try {
-      await message.channel.bulkDelete(count, true);
-      const m = await message.channel.send(`✅ **${count}** adet mesaj silindi.`);
-      setTimeout(() => m.delete().catch(() => {}), 4000);
+  If (command === "sil") {
+    If (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("❌ Bu komut için Mesajları Yönet yetkin olmalı.");
+    Const count = parseInt(args[0]);
+    If (!count || count < 1 || count > 100) return message.reply("⚠️ Lütfen 1 ile 100 arasında bir sayı gir.");
+    Try {
+      Await message.channel.bulkDelete(count, true);
+      Const m = await message.channel.send(`✅ **${count}** adet mesaj silindi.`);
+      SetTimeout(() => m.delete().catch(() => {}), 4000);
     } catch {
-      message.reply("❌ Mesajlar silinemedi (14 günden eski mesajlar toplu silinemez).");
+      Message.reply("❌ Mesajlar silinemedi (14 günden eski mesajlar toplu silinemez).");
     }
   }
 
-  if (command === "ban") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("❌ Üyeleri Yasakla yetkin yok.");
-    const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-    if (!targetMember) return message.reply("⚠️ Lütfen banlanacak üyeyi etiketle (`!ban @kullanıcı [sebep]`).");
+  If (command === "ban") {
+    If (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("❌ Üyeleri Yasakla yetkin yok.");
+    Const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    If (!targetMember) return message.reply("⚠️ Lütfen banlanacak üyeyi etiketle (`!ban @kullanıcı [sebep]`).");
     
-    args.shift();
-    const sebep = args.join(" ") || "Sebep belirtilmedi";
+    Args.shift();
+    Const sebep = args.join(" ") || "Sebep belirtilmedi";
 
-    if (!targetMember.bannable) return message.reply("❌ Bu kullanıcıyı banlayamam (Yetkisi benden üstün).");
+    If (!targetMember.bannable) return message.reply("❌ Bu kullanıcıyı banlayamam (Yetkisi benden üstün).");
 
-    try {
-      await targetMember.ban({ reason: sebep });
-      message.reply(`✅ **${targetMember.user.tag}** sunucudan banlandı.`);
+    Try {
+      Await targetMember.ban({ reason: sebep });
+      Message.reply(`✅ **${targetMember.user.tag}** sunucudan banlandı.`);
 
-      if (settings.dcCezaChannel) {
-        const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
-        if (logChan) {
-          const embed = new EmbedBuilder().setColor(0xed4245).setTitle("🔨 YETKİLİ BAN")
+      If (settings.dcCezaChannel) {
+        Const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
+        If (logChan) {
+          Const embed = new EmbedBuilder().setColor(0xed4245).setTitle("🔨 YETKİLİ BAN")
             .addFields({ name: "👤 Banlanan", value: `${targetMember.user}` }, { name: "🛡️ Yetkili", value: `${message.author}` }, { name: "Sebep", value: sebep }).setTimestamp();
-          logChan.send({ embeds: [embed] });
+          LogChan.send({ embeds: [embed] });
         }
       }
     } catch (e) {
-      message.reply("❌ Ban işlemi başarısız oldu.");
+      Message.reply("❌ Ban işlemi başarısız oldu.");
     }
   }
 
-  if (command === "mute") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
-    const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-    if (!targetMember) return message.reply("⚠️ Kullanım: `!mute @kullanıcı [süre örn: 30m] [sebep]`");
+  If (command === "mute") {
+    If (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
+    Const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    If (!targetMember) return message.reply("⚠️ Kullanım: `!mute @kullanıcı [süre örn: 30m] [sebep]`");
 
-    args.shift();
-    const süreStr = args.shift();
-    const sebep = args.join(" ") || "Sebep belirtilmedi";
+    Args.shift();
+    Const süreStr = args.shift();
+    Const sebep = args.join(" ") || "Sebep belirtilmedi";
 
-    const msDuration = parseDuration(süreStr);
-    if (!msDuration) return message.reply("❌ Geçersiz süre formatı! (Örn: `30m`, `1h`, `1d`)");
+    Const msDuration = parseDuration(süreStr);
+    If (!msDuration) return message.reply("❌ Geçersiz süre formatı! (Örn: `30m`, `1h`, `1d`)");
 
-    try {
-      await targetMember.timeout(msDuration, sebep);
-      message.reply(`✅ **${targetMember.user.tag}** başarıyla **${süreStr}** süreyle susturuldu.`);
+    Try {
+      Await targetMember.timeout(msDuration, sebep);
+      Message.reply(`✅ **${targetMember.user.tag}** başarıyla **${süreStr}** süreyle susturuldu.`);
 
-      if (settings.dcCezaChannel) {
-        const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
-        if (logChan) {
-          const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle("🔇 YETKİLİ MUTE (SUSTURMA)")
+      If (settings.dcCezaChannel) {
+        Const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
+        If (logChan) {
+          Const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle("🔇 YETKİLİ MUTE (SUSTURMA)")
             .addFields({ name: "👤 Susturulan", value: `${targetMember.user}` }, { name: "Süre", value: süreStr }, { name: "Yetkili", value: `${message.author}` }, { name: "Sebep", value: sebep }).setTimestamp();
-          logChan.send({ embeds: [embed] });
+          LogChan.send({ embeds: [embed] });
         }
       }
     } catch (e) {
-      message.reply("❌ Susturma işlemi başarısız oldu.");
+      Message.reply("❌ Susturma işlemi başarısız oldu.");
     }
   }
 
-  if (command === "unmute") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
-    const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-    if (!targetMember) return message.reply("⚠️ Kullanım: `!unmute @kullanıcı`");
+  If (command === "unmute") {
+    If (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
+    Const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    If (!targetMember) return message.reply("⚠️ Kullanım: `!unmute @kullanıcı`");
 
-    try {
-      await targetMember.timeout(null);
-      message.reply(`✅ **${targetMember.user.tag}** adlı kullanıcının susturulması kaldırıldı.`);
+    Try {
+      Await targetMember.timeout(null);
+      Message.reply(`✅ **${targetMember.user.tag}** adlı kullanıcının susturulması kaldırıldı.`);
 
-      if (settings.dcCezaChannel) {
-        const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
-        if (logChan) {
-          const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle("🔊 UNMUTE (SUSTURMA KALDIRILDI)")
+      If (settings.dcCezaChannel) {
+        Const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
+        If (logChan) {
+          Const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle("🔊 UNMUTE (SUSTURMA KALDIRILDI)")
             .addFields({ name: "👤 Susturması Kaldırılan", value: `${targetMember.user}` }, { name: "Yetkili", value: `${message.author}` }).setTimestamp();
-          logChan.send({ embeds: [embed] });
+          LogChan.send({ embeds: [embed] });
         }
       }
     } catch (e) {
-      message.reply("❌ Susturma kaldırılırken bir hata oluştu.");
+      Message.reply("❌ Susturma kaldırılırken bir hata oluştu.");
     }
   }
 
-  if (command === "ip") {
-    const embed = new EmbedBuilder()
+  If (command === "ip") {
+    Const embed = new EmbedBuilder()
       .setColor(0x2ecc71)
       .setTitle("🌍 CubixoraSMP IP ve Sürüm Bilgisi")
       .addFields(
         { name: "☕ Java Sürüm & IP", value: `IP: \`${MC_IP}\`\nSürüm: \`${JAVA_VERSION}\`` },
         { name: "📱 Bedrock Sürüm, IP & Port", value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nSürüm: \`${BEDROCK_VERSION}\`` }
       );
-    return message.reply({ embeds: [embed] });
+    Return message.reply({ embeds: [embed] });
   }
 });
 
-client.on("interactionCreate", async interaction => {
-  if (interaction.isChatInputCommand()) {
-    const guild = interaction.guild;
-    const member = interaction.member;
-    const settings = getSettings(guild.id);
+Client.on("interactionCreate", async interaction => {
+  If (interaction.isChatInputCommand()) {
+    Const guild = interaction.guild;
+    Const member = interaction.member;
+    Const settings = getSettings(guild.id);
 
-    if (interaction.commandName === "restart") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-        return interaction.reply({ content: "❌ Bu komutu yalnızca **Yöneticiler** kullanabilir!", ephemeral: true });
+    If (interaction.commandName === "restart") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        Return interaction.reply({ content: "❌ Bu komutu yalnızca **Yöneticiler** kullanabilir!", ephemeral: true });
       }
-      await interaction.reply({ content: "🔄 Bot yeniden başlatılıyor..." });
-      setTimeout(() => { process.exit(0); }, 1000);
-      return;
+      Await interaction.reply({ content: "🔄 Bot yeniden başlatılıyor..." });
+      SetTimeout(() => { process.exit(0); }, 1000);
+      Return;
     }
 
-    if (interaction.commandName === "ip") {
-      const embed = new EmbedBuilder()
+    If (interaction.commandName === "ip") {
+      Const embed = new EmbedBuilder()
         .setColor(0x2ecc71)
         .setTitle("🌍 CubixoraSMP IP ve Sürüm Bilgisi")
         .addFields(
           { name: "☕ Java Sürüm & IP", value: `IP: \`${MC_IP}\`\nSürüm: \`${JAVA_VERSION}\`` },
           { name: "📱 Bedrock Sürüm, IP & Port", value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nSürüm: \`${BEDROCK_VERSION}\`` }
         );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      Return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    if (interaction.commandName === "owner-ekle") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
-      const targetUser = interaction.options.getUser("uye");
-      const owners = getOwners(guild.id);
-      if (owners.includes(targetUser.id)) return interaction.reply({ content: `⚠️ ${targetUser} zaten owner listesinde!`, ephemeral: true });
-      owners.push(targetUser.id);
-      return interaction.reply({ content: `✅ ${targetUser} owner listesine eklendi!` });
+    If (interaction.commandName === "owner-ekle") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      Const targetUser = interaction.options.getUser("uye");
+      Const owners = getOwners(guild.id);
+      If (owners.includes(targetUser.id)) return interaction.reply({ content: `⚠️ ${targetUser} zaten owner listesinde!`, ephemeral: true });
+      Owners.push(targetUser.id);
+      Return interaction.reply({ content: `✅ ${targetUser} owner listesine eklendi!` });
     }
 
-    if (interaction.commandName === "owner-çıkar") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
-      const targetUser = interaction.options.getUser("uye");
-      let owners = getOwners(guild.id);
-      if (!owners.includes(targetUser.id)) return interaction.reply({ content: `⚠️ ${targetUser} listede yok.`, ephemeral: true });
-      guildOwners.set(guild.id, owners.filter(id => id !== targetUser.id));
-      return interaction.reply({ content: `✅ ${targetUser} owner listesinden çıkarıldı.` });
+    If (interaction.commandName === "owner-çıkar") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      Const targetUser = interaction.options.getUser("uye");
+      Let owners = getOwners(guild.id);
+      If (!owners.includes(targetUser.id)) return interaction.reply({ content: `⚠️ ${targetUser} listede yok.`, ephemeral: true });
+      GuildOwners.set(guild.id, owners.filter(id => id !== targetUser.id));
+      Return interaction.reply({ content: `✅ ${targetUser} owner listesinden çıkarıldı.` });
     }
 
-    if (interaction.commandName === "owner-list") {
-      const owners = getOwners(guild.id);
-      if (owners.length === 0) return interaction.reply({ content: "⚠️ Kayıtlı owner yok.", ephemeral: true });
-      const ownerTags = owners.map(id => `<@${id}>`).join("\n");
-      const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle(`👑 ${guild.name} — Owner Listesi`).setDescription(ownerTags).setTimestamp();
-      return interaction.reply({ embeds: [embed] });
+    If (interaction.commandName === "owner-list") {
+      Const owners = getOwners(guild.id);
+      If (owners.length === 0) return interaction.reply({ content: "⚠️ Kayıtlı owner yok.", ephemeral: true });
+      Const ownerTags = owners.map(id => `<@${id}>`).join("\n");
+      Const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle(`👑 ${guild.name} — Owner Listesi`).setDescription(ownerTags).setTimestamp();
+      Return interaction.reply({ embeds: [embed] });
     }
 
-    if (interaction.commandName === "korma-ekle") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
-      const role = interaction.options.getRole("rol");
-      if (settings.protectedRoles.includes(role.id)) return interaction.reply({ content: `⚠️ Bu rol zaten korumalı listede!`, ephemeral: true });
-      settings.protectedRoles.push(role.id);
-      return interaction.reply({ content: `✅ ${role} başarıyla korumalı rollere eklendi.` });
+    If (interaction.commandName === "korma-ekle") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      Const role = interaction.options.getRole("rol");
+      If (settings.protectedRoles.includes(role.id)) return interaction.reply({ content: `⚠️ Bu rol zaten korumalı listede!`, ephemeral: true });
+      Settings.protectedRoles.push(role.id);
+      Return interaction.reply({ content: `✅ ${role} başarıyla korumalı rollere eklendi.` });
     }
 
-    if (interaction.commandName === "korma-cikar") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
-      const role = interaction.options.getRole("rol");
-      if (!settings.protectedRoles.includes(role.id)) return interaction.reply({ content: `⚠️ Bu rol korumalı listede bulunmuyor.`, ephemeral: true });
-      settings.protectedRoles = settings.protectedRoles.filter(id => id !== role.id);
-      return interaction.reply({ content: `✅ ${role} korumalı rollerden çıkarıldı.` });
+    If (interaction.commandName === "korma-cikar") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      Const role = interaction.options.getRole("rol");
+      If (!settings.protectedRoles.includes(role.id)) return interaction.reply({ content: `⚠️ Bu rol korumalı listede bulunmuyor.`, ephemeral: true });
+      Settings.protectedRoles = settings.protectedRoles.filter(id => id !== role.id);
+      Return interaction.reply({ content: `✅ ${role} korumalı rollerden çıkarıldı.` });
     }
 
-    if (interaction.commandName === "korma-list") {
-      if (settings.protectedRoles.length === 0) return interaction.reply({ content: "⚠️ Korumalı rol bulunmuyor.", ephemeral: true });
-      const roleTags = settings.protectedRoles.map(id => `<@&${id}>`).join("\n");
-      const embed = new EmbedBuilder().setColor(0xe74c3c).setTitle("🛡️ Korumalı Roller Listesi").setDescription(roleTags).setTimestamp();
-      return interaction.reply({ embeds: [embed] });
+    If (interaction.commandName === "korma-list") {
+      If (settings.protectedRoles.length === 0) return interaction.reply({ content: "⚠️ Korumalı rol bulunmuyor.", ephemeral: true });
+      Const roleTags = settings.protectedRoles.map(id => `<@&${id}>`).join("\n");
+      Const embed = new EmbedBuilder().setColor(0xe74c3c).setTitle("🛡️ Korumalı Roller Listesi").setDescription(roleTags).setTimestamp();
+      Return interaction.reply({ embeds: [embed] });
     }
 
-    if (interaction.commandName === "müzikpanelyarat") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
-      const channel = interaction.options.getChannel("kanal");
+    If (interaction.commandName === "müzikpanelyarat") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      Const channel = interaction.options.getChannel("kanal");
 
-      const embed = new EmbedBuilder()
+      Const embed = new EmbedBuilder()
         .setColor(0x9b59b6)
         .setTitle("🎶 CubixoraSMP Müzik Paneli")
         .setDescription("Aşağıdaki butonları kullanarak ses kanalında müziği durdurabilir, devam ettirebilir veya bottan ayrılmasını sağlayabilirsin!")
         .setFooter({ text: `${BOT_NAME} • Müzik Sistemi` });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("music_pause").setLabel("Durdur / Devam Et").setStyle(ButtonStyle.Primary).setEmoji("⏯️"),
-        new ButtonBuilder().setCustomId("music_stop").setLabel("Ayrıl").setStyle(ButtonStyle.Danger).setEmoji("⏹️")
+      Const row = new ActionRowBuilder().addComponents(
+        New ButtonBuilder().setCustomId("music_pause").setLabel("Durdur / Devam Et").setStyle(ButtonStyle.Primary).setEmoji("⏯️"),
+        New ButtonBuilder().setCustomId("music_stop").setLabel("Ayrıl").setStyle(ButtonStyle.Danger).setEmoji("⏹️")
       );
 
-      await channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: `✅ Müzik paneli ${channel} kanalına başarıyla kuruldu!`, ephemeral: true });
+      Await channel.send({ embeds: [embed], components: [row] });
+      Return interaction.reply({ content: `✅ Müzik paneli ${channel} kanalına başarıyla kuruldu!`, ephemeral: true });
     }
 
-    if (interaction.commandName === "panelacmezük") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
-      const channel = interaction.options.getChannel("kanal");
-      const sarkAdi = interaction.options.getString("şarkı");
+    If (interaction.commandName === "panelacmezük") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      Const channel = interaction.options.getChannel("kanal");
+      Const sarkAdi = interaction.options.getString("şarkı");
 
-      const embed = new EmbedBuilder()
+      Const embed = new EmbedBuilder()
         .setColor(0x1abc9c)
         .setTitle("🎧 Kesintisiz Müzik Paneli")
         .setDescription(`Bu panel üzerinden botu ses kanalına çağırıp **${sarkAdi}** şarkısını sürekli çalmasını sağlayabilirsin!`)
         .setFooter({ text: `${BOT_NAME} • Sürekli Müzik` });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`play_continuous_${sarkAdi}`).setLabel("Sesi Aç ve Müziği Başlat").setStyle(ButtonStyle.Success).setEmoji("▶️"),
-        new ButtonBuilder().setCustomId("music_stop").setLabel("Kapat/Ayrıl").setStyle(ButtonStyle.Danger).setEmoji("⏹️")
+      Const row = new ActionRowBuilder().addComponents(
+        New ButtonBuilder().setCustomId(`play_continuous_${sarkAdi}`).setLabel("Sesi Aç ve Müziği Başlat").setStyle(ButtonStyle.Success).setEmoji("▶️"),
+        New ButtonBuilder().setCustomId("music_stop").setLabel("Kapat/Ayrıl").setStyle(ButtonStyle.Danger).setEmoji("⏹️")
       );
 
-      await channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: `✅ Sürekli müzik paneli ${channel} kanalına kuruldu!`, ephemeral: true });
+      Await channel.send({ embeds: [embed], components: [row] });
+      Return interaction.reply({ content: `✅ Sürekli müzik paneli ${channel} kanalına kuruldu!`, ephemeral: true });
     }
 
-    if (interaction.commandName === "ticket-kur") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yönetici olmalısın.", ephemeral: true });
-      const channel = interaction.options.getChannel("kanal");
-      const yetkiliRol = interaction.options.getRole("yetkili-rol");
-      const baslik = interaction.options.getString("baslik");
-      const aciklama = interaction.options.getString("aciklama");
+    If (interaction.commandName === "ticket-kur") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yönetici olmalısın.", ephemeral: true });
+      Const channel = interaction.options.getChannel("kanal");
+      Const yetkiliRol = interaction.options.getRole("yetkili-rol");
+      Const baslik = interaction.options.getString("baslik");
+      Const aciklama = interaction.options.getString("aciklama");
 
-      const embed = new EmbedBuilder()
+      Const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle(`🎫 ${baslik}`)
         .setDescription(aciklama)
         .setFooter({ text: `${BOT_NAME} • Yetkili Rol: ${yetkiliRol.name}` })
         .setTimestamp();
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`create_ticket_${yetkiliRol.id}`).setLabel("Destek Talebi Aç").setStyle(ButtonStyle.Primary).setEmoji("🎫")
+      Const row = new ActionRowBuilder().addComponents(
+        New ButtonBuilder().setCustomId(`create_ticket_${yetkiliRol.id}`).setLabel("Destek Talebi Aç").setStyle(ButtonStyle.Primary).setEmoji("🎫")
       );
 
-      await channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: `✅ Ticket paneli ${channel} kanalına kuruldu! Yetkili Rol: **${yetkiliRol.name}**`, ephemeral: true });
+      Await channel.send({ embeds: [embed], components: [row] });
+      Return interaction.reply({ content: `✅ Ticket paneli ${channel} kanalına kuruldu! Yetkili Rol: **${yetkiliRol.name}**`, ephemeral: true });
     }
 
-    if (interaction.commandName === "hoşgeldin-kanal") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
-      settings.welcomeChannel = interaction.options.getChannel("kanal").id;
-      return interaction.reply({ content: "✅ Hoşgeldin kanalı ayarlandı.", ephemeral: true });
+    If (interaction.commandName === "hoşgeldin-kanal") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      Settings.welcomeChannel = interaction.options.getChannel("kanal").id;
+      Return interaction.reply({ content: "✅ Hoşgeldin kanalı ayarlandı.", ephemeral: true });
     }
 
-    if (interaction.commandName === "gülegüle-kanal") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
-      settings.goodbyeChannel = interaction.options.getChannel("kanal").id;
-      return interaction.reply({ content: "✅ Güle güle kanalı ayarlandı.", ephemeral: true });
+    If (interaction.commandName === "gülegüle-kanal") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      Settings.goodbyeChannel = interaction.options.getChannel("kanal").id;
+      Return interaction.reply({ content: "✅ Güle güle kanalı ayarlandı.", ephemeral: true });
     }
 
-    if (interaction.commandName === "dc-ceza") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
-      settings.dcCezaChannel = interaction.options.getChannel("kanal").id;
-      return interaction.reply({ content: "✅ Discord ceza log kanalı ayarlandı.", ephemeral: true });
+    If (interaction.commandName === "dc-ceza") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      Settings.dcCezaChannel = interaction.options.getChannel("kanal").id;
+      Return interaction.reply({ content: "✅ Discord ceza log kanalı ayarlandı.", ephemeral: true });
     }
 
-    if (interaction.commandName === "mc-ceza") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
-      settings.mcCezaChannel = interaction.options.getChannel("kanal").id;
-      return interaction.reply({ content: "✅ Minecraft ceza log kanalı ayarlandı.", ephemeral: true });
+    If (interaction.commandName === "mc-ceza") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      Settings.mcCezaChannel = interaction.options.getChannel("kanal").id;
+      Return interaction.reply({ content: "✅ Minecraft ceza log kanalı ayarlandı.", ephemeral: true });
     }
 
-    if (interaction.commandName === "mcsohbet") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
-      settings.mcSohbetChannel = interaction.options.getChannel("kanal").id;
-      return interaction.reply({ content: "✅ Minecraft sohbet kanalı ayarlandı.", ephemeral: true });
+    If (interaction.commandName === "mcsohbet") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      Settings.mcSohbetChannel = interaction.options.getChannel("kanal").id;
+      Return interaction.reply({ content: "✅ Minecraft sohbet kanalı ayarlandı.", ephemeral: true });
     }
 
-    if (interaction.commandName === "yapayzrakakal") {
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
-      settings.aiChannel = interaction.options.getChannel("kanal").id;
-      return interaction.reply({ content: "✅ Yapay zeka sohbet kanalı başarıyla ayarlandı!", ephemeral: true });
+    If (interaction.commandName === "yapayzrakakal") {
+      If (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      Settings.aiChannel = interaction.options.getChannel("kanal").id;
+      Return interaction.reply({ content: "✅ Yapay zeka sohbet kanalı başarıyla ayarlandı!", ephemeral: true });
     }
 
-    if (interaction.commandName === "çal") {
-      const channel = member.voice.channel;
-      if (!channel) return interaction.reply({ content: "❌ Önce bir ses kanalına girmelisin!", ephemeral: true });
+    If (interaction.commandName === "çal") {
+      Const channel = member.voice.channel;
+      If (!channel) return interaction.reply({ content: "❌ Önce bir ses kanalına girmelisin!", ephemeral: true });
 
-      const query = interaction.options.getString("şarkı");
-      await interaction.deferReply();
+      Const query = interaction.options.getString("şarkı");
+      Await interaction.deferReply();
 
-      try {
-        const stream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
-        const resource = createAudioResource(stream);
-        const player = createAudioPlayer();
+      Try {
+        Const stream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+        Const resource = createAudioResource(stream);
+        Const player = createAudioPlayer();
 
-        const connection = joinVoiceChannel({
-          channelId: channel.id,
-          guildId: guild.id,
-          adapterCreator: guild.voiceAdapterCreator,
+        Const connection = joinVoiceChannel({
+          ChannelId: channel.id,
+          GuildId: guild.id,
+          AdapterCreator: guild.voiceAdapterCreator,
         });
 
-        connection.subscribe(player);
-        player.play(resource);
+        Connection.subscribe(player);
+        Player.play(resource);
 
-        client.activeAudioPlayer = player;
+        Client.activeAudioPlayer = player;
 
-        return interaction.editReply(`🎶 Çalınıyor: **${query}**`);
+        Return interaction.editReply(`🎶 Çalınıyor: **${query}**`);
       } catch (e) {
-        return interaction.editReply("❌ Şarkı oynatılırken bir hata oluştu veya link geçersiz.");
+        Return interaction.editReply("❌ Şarkı oynatılırken bir hata oluştu veya link geçersiz.");
       }
     }
 
-    if (interaction.commandName === "durdur") {
-      if (client.activeAudioPlayer) {
-        if (client.activeAudioPlayer.state.status === AudioPlayerStatus.Playing) {
-          client.activeAudioPlayer.pause();
-          return interaction.reply({ content: "⏸️ Müzik durduruldu.", ephemeral: true });
+    If (interaction.commandName === "durdur") {
+      If (client.activeAudioPlayer) {
+        If (client.activeAudioPlayer.state.status === AudioPlayerStatus.Playing) {
+          Client.activeAudioPlayer.pause();
+          Return interaction.reply({ content: "⏸️ Müzik durduruldu.", ephemeral: true });
         } else {
-          client.activeAudioPlayer.unpause();
-          return interaction.reply({ content: "▶️ Müzik devam ettiriliyor.", ephemeral: true });
+          Client.activeAudioPlayer.unpause();
+          Return interaction.reply({ content: "▶️ Müzik devam ettiriliyor.", ephemeral: true });
         }
       }
-      return interaction.reply({ content: "❌ Aktif çalan bir müzik yok.", ephemeral: true });
+      Return interaction.reply({ content: "❌ Aktif çalan bir müzik yok.", ephemeral: true });
     }
 
-    if (interaction.commandName === "ayrıl") {
-      const connection = require("@discordjs/voice").getVoiceConnection(guild.id);
-      if (connection) {
-        connection.destroy();
-        return interaction.reply({ content: "👋 Ses kanalından ayrıldım." });
+    If (interaction.commandName === "ayrıl") {
+      Const connection = require("@discordjs/voice").getVoiceConnection(guild.id);
+      If (connection) {
+        Connection.destroy();
+        Return interaction.reply({ content: "👋 Ses kanalından ayrıldım." });
       }
-      return interaction.reply({ content: "❌ Zaten bir ses kanalında değilim.", ephemeral: true });
+      Return interaction.reply({ content: "❌ Zaten bir ses kanalında değilim.", ephemeral: true });
     }
   }
 
-  if (interaction.isButton()) {
-    if (interaction.customId === "music_pause") {
-      if (client.activeAudioPlayer) {
-        if (client.activeAudioPlayer.state.status === AudioPlayerStatus.Playing) {
-          client.activeAudioPlayer.pause();
-          return interaction.reply({ content: "⏸️ Müzik durduruldu.", ephemeral: true });
+  If (interaction.isButton()) {
+    If (interaction.customId === "music_pause") {
+      If (client.activeAudioPlayer) {
+        If (client.activeAudioPlayer.state.status === AudioPlayerStatus.Playing) {
+          Client.activeAudioPlayer.pause();
+          Return interaction.reply({ content: "⏸️ Müzik durduruldu.", ephemeral: true });
         } else {
-          client.activeAudioPlayer.unpause();
-          return interaction.reply({ content: "▶️ Müzik devam ettiriliyor.", ephemeral: true });
+          Client.activeAudioPlayer.unpause();
+          Return interaction.reply({ content: "▶️ Müzik devam ettiriliyor.", ephemeral: true });
         }
       }
-      return interaction.reply({ content: "❌ Aktif çalan bir müzik yok.", ephemeral: true });
+      Return interaction.reply({ content: "❌ Aktif çalan bir müzik yok.", ephemeral: true });
     }
 
-    if (interaction.customId === "music_stop") {
-      const connection = require("@discordjs/voice").getVoiceConnection(interaction.guild.id);
-      if (connection) {
-        connection.destroy();
-        return interaction.reply({ content: "⏹️ Müzik durduruldu ve ses kanalından ayrıldı.", ephemeral: true });
+    If (interaction.customId === "music_stop") {
+      Const connection = require("@discordjs/voice").getVoiceConnection(interaction.guild.id);
+      If (connection) {
+        Connection.destroy();
+        Return interaction.reply({ content: "⏹️ Müzik durduruldu ve ses kanalından ayrıldı.", ephemeral: true });
       }
-      return interaction.reply({ content: "❌ Bot zaten ses kanalında değil.", ephemeral: true });
+      Return interaction.reply({ content: "❌ Bot zaten ses kanalında değil.", ephemeral: true });
     }
 
-    if (interaction.customId.startsWith("play_continuous_")) {
-      const query = interaction.customId.replace("play_continuous_", "");
-      const member = interaction.member;
-      const channel = member.voice.channel;
+    If (interaction.customId.startsWith("play_continuous_")) {
+      Const query = interaction.customId.replace("play_continuous_", "");
+      Const member = interaction.member;
+      Const channel = member.voice.channel;
 
-      if (!channel) return interaction.reply({ content: "❌ Bu paneli kullanabilmek için önce bir ses kanalına girmelisin!", ephemeral: true });
+      If (!channel) return interaction.reply({ content: "❌ Bu paneli kullanabilmek için önce bir ses kanalına girmelisin!", ephemeral: true });
 
-      await interaction.deferReply({ ephemeral: true });
+      Await interaction.deferReply({ ephemeral: true });
 
-      try {
-        const stream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
-        const resource = createAudioResource(stream);
-        const player = createAudioPlayer();
+      Try {
+        Const stream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+        Const resource = createAudioResource(stream);
+        Const player = createAudioPlayer();
 
-        const connection = joinVoiceChannel({
-          channelId: channel.id,
-          guildId: interaction.guild.id,
-          adapterCreator: interaction.guild.voiceAdapterCreator,
+        Const connection = joinVoiceChannel({
+          ChannelId: channel.id,
+          GuildId: interaction.guild.id,
+          AdapterCreator: interaction.guild.voiceAdapterCreator,
         });
 
-        connection.subscribe(player);
-        player.play(resource);
+        Connection.subscribe(player);
+        Player.play(resource);
 
-        client.activeAudioPlayer = player;
+        Client.activeAudioPlayer = player;
 
-        player.on(AudioPlayerStatus.Idle, () => {
-          try {
-            const newStream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
-            const newResource = createAudioResource(newStream);
-            player.play(newResource);
+        Player.on(AudioPlayerStatus.Idle, () => {
+          Try {
+            Const newStream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+            Const newResource = createAudioResource(newStream);
+            Player.play(newResource);
           } catch {}
         });
 
-        return interaction.editReply({ content: `🎧 Bot ses kanalına katıldı ve **${query}** kesintisiz çalmaya başladı!` });
+        Return interaction.editReply({ content: `🎧 Bot ses kanalına katıldı ve **${query}** kesintisiz çalmaya başladı!` });
       } catch (e) {
-        return interaction.editReply({ content: "❌ Şarkı açılırken bir hata oluştu veya link geçersiz." });
+        Return interaction.editReply({ content: "❌ Şarkı açılırken bir hata oluştu veya link geçersiz." });
       }
     }
 
-    if (interaction.customId.startsWith("create_ticket_")) {
-      const userOpenTickets = interaction.guild.channels.cache.filter(
-        ch => ch.name.startsWith("ticket-") && ch.permissionOverwrites.cache.has(interaction.user.id)
+    If (interaction.customId.startsWith("create_ticket_")) {
+      Const userOpenTickets = interaction.guild.channels.cache.filter(
+        Ch => ch.name.startsWith("ticket-") && ch.permissionOverwrites.cache.has(interaction.user.id)
       );
 
-      if (userOpenTickets.size >= 5) {
-        return interaction.reply({ content: "⚠️ Aynı anda en fazla **5 adet** açık destek talebine sahip olabilirsin!", ephemeral: true });
+      If (userOpenTickets.size >= 5) {
+        Return interaction.reply({ content: "⚠️ Aynı anda en fazla **5 adet** açık destek talebine sahip olabilirsin!", ephemeral: true });
       }
 
-      await interaction.deferReply({ ephemeral: true });
-      const roleId = interaction.customId.split("_")[2];
+      Await interaction.deferReply({ ephemeral: true });
+      Const roleId = interaction.customId.split("_")[2];
 
-      const ticketChan = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        permissionOverwrites: [
+      Const ticketChan = await interaction.guild.channels.create({
+        Name: `ticket-${interaction.user.username}`,
+        Type: ChannelType.GuildText,
+        PermissionOverwrites: [
           { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
           { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-          { id: roleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+          { id: roleId, allow: [PermissionsBitField.FindFlags?.ViewChannel || PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
           { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
         ]
       });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("claim_ticket").setLabel("Talebi Üstlen").setStyle(ButtonStyle.Success).setEmoji("🙋‍♂️"),
-        new ButtonBuilder().setCustomId("close_ticket").setLabel("Talebi Kapat").setStyle(ButtonStyle.Danger).setEmoji("🔒")
+      Const row = new ActionRowBuilder().addComponents(
+        New ButtonBuilder().setCustomId("claim_ticket").setLabel("Talebi Üstlen").setStyle(ButtonStyle.Success).setEmoji("🙋‍♂️"),
+        New ButtonBuilder().setCustomId("close_ticket").setLabel("Talebi Kapat").setStyle(ButtonStyle.Danger).setEmoji("🔒")
       );
       
-      await ticketChan.send({ 
-        content: `👋 Merhaba ${interaction.user}! <@&${roleId}> ekibimiz seninle ilgilenmek için birazdan burada olacak.\n🚀 **Çok yakında harika yenilikler ve sürprizlerle geliyoruz, takipte kalın!**`, 
-        components: [row] 
+      Await ticketChan.send({ 
+        Content: `👋 Merhaba ${interaction.user}! <@&${roleId}> ekibimiz seninle ilgilenmek için birazdan burada olacak.\n🚀 **Çok yakında harika yenilikler ve sürprizlerle geliyoruz, takipte kalın!**`, 
+        Components: [row] 
       });
       
-      return interaction.editReply({ content: `✅ Destek odan açıldı: ${ticketChan}` });
+      Return interaction.editReply({ content: `✅ Destek odan açıldı: ${ticketChan}` });
     }
 
-    if (interaction.customId === "claim_ticket") {
-      await interaction.reply({ content: `🙋‍♂️ Bu destek talebi **${interaction.user.tag}** tarafından üstlenildi!` });
+    If (interaction.customId === "claim_ticket") {
+      Await interaction.reply({ content: `🙋‍♂️ Bu destek talebi **${interaction.user.tag}** tarafından üstlenildi!` });
     }
 
-    if (interaction.customId === "close_ticket") {
-      await interaction.reply({ content: "🔒 Talep kapatılıyor..." });
-      setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
+    If (interaction.customId === "close_ticket") {
+      Await interaction.reply({ content: "🔒 Talep kapatılıyor..." });
+      SetTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
     }
   }
 });
 
-client.login(process.env.TOKEN);
+Client.login(process.env.TOKEN);
