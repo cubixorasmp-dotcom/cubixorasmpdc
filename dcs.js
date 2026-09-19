@@ -54,6 +54,7 @@ function getSettings(guildId) {
       dcCezaChannel: null,
       mcCezaChannel: null,
       mcSohbetChannel: null,
+      aiChannel: null, // Yapay zeka kanalı
       protectedRoles: []
     });
   }
@@ -90,6 +91,7 @@ const slashCommands = [
   new SlashCommandBuilder().setName("dc-ceza").setDescription("Discord ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("mc-ceza").setDescription("Minecraft ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("mcsohbet").setDescription("Minecraft sohbet/giriş-çıkış log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  new SlashCommandBuilder().setName("yapayzrakakal").setDescription("Yapay zeka sohbet kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   
   new SlashCommandBuilder().setName("owner-ekle").setDescription("Sunucuya yeni bir owner ekler").addUserOption(o => o.setName("uye").setDescription("Owner yapılacak üye").setRequired(true)),
   new SlashCommandBuilder().setName("owner-çıkar").setDescription("Sunucudaki bir owner'ı çıkarır").addUserOption(o => o.setName("uye").setDescription("Ownerlıktan çıkarılacak üye").setRequired(true)),
@@ -107,6 +109,7 @@ const slashCommands = [
     .addStringOption(o => o.setName("aciklama").setDescription("Ticket Panel Açıklaması").setRequired(true)),
 
   new SlashCommandBuilder().setName("müzikpanelyarat").setDescription("Butonlu müzik kontrol paneli kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
+  new SlashCommandBuilder().setName("panelacmezük").setDescription("Ses kanalına katılıp otomatik müzik çalmaya başlayan özel panel kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)).addStringOption(o => o.setName("şarkı").setDescription("Çalınacak şarkı adı veya linki").setRequired(true)),
   new SlashCommandBuilder().setName("çal").setDescription("Müzik çalar").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki").setRequired(true)),
   new SlashCommandBuilder().setName("durdur").setDescription("Çalan müziği durdurur/oynatır"),
   new SlashCommandBuilder().setName("ayrıl").setDescription("Botu ses kanalından çıkarır")
@@ -170,6 +173,19 @@ client.on("messageCreate", async message => {
   const settings = getSettings(message.guild.id);
   const content = message.content;
   const lower = content.toLowerCase().trim();
+
+  // Yapay Zeka Kanalı Kontrolü
+  if (settings.aiChannel && message.channel.id === settings.aiChannel) {
+    const responses = [
+      "Anladım, bu konuda sana katılıyorum! 🤖",
+      "Gerçekten mi? Harika bir düşünce! ✨",
+      "CubixoraSMP sunucumuz için en iyisini yapmaya devam ediyoruz! 🚀",
+      `Hmm, ${message.author.username}, bunu biraz daha açar mısın? 🤔`,
+      "Bunu duyduğuma sevindim! Başka nasıl yardımcı olabilirim? 💡"
+    ];
+    const randomResp = responses[Math.floor(Math.random() * responses.length)];
+    return message.reply(randomResp);
+  }
 
   if (["sa", "s.a", "selam", "selamün aleyküm", "selamun aleykum", "selamin aleykum"].includes(lower)) {
     return message.reply("Aleyküm Selam, hoş geldin! 👋");
@@ -282,6 +298,29 @@ client.on("messageCreate", async message => {
     }
   }
 
+  // !unmute komutu (Kişi ismini etiketleyerek mutesini kaldırma)
+  if (command === "unmute") {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
+    const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    if (!targetMember) return message.reply("⚠️ Kullanım: `!unmute @kullanıcı`");
+
+    try {
+      await targetMember.timeout(null);
+      message.reply(`✅ **${targetMember.user.tag}** adlı kullanıcının susturulması kaldırıldı.`);
+
+      if (settings.dcCezaChannel) {
+        const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
+        if (logChan) {
+          const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle("🔊 UNMUTE (SUSTURMA KALDIRILDI)")
+            .addFields({ name: "👤 Susturması Kaldırılan", value: `${targetMember.user}` }, { name: "Yetkili", value: `${message.author}` }).setTimestamp();
+          logChan.send({ embeds: [embed] });
+        }
+      }
+    } catch (e) {
+      message.reply("❌ Susturma kaldırılırken bir hata oluştu.");
+    }
+  }
+
   if (command === "ip") {
     const embed = new EmbedBuilder()
       .setColor(0x2ecc71)
@@ -391,6 +430,27 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: `✅ Müzik paneli ${channel} kanalına başarıyla kuruldu!`, ephemeral: true });
     }
 
+    // /panelacmezük komutu (Ses kanalına katılıp sürekli müzik çalan özel panel)
+    if (interaction.commandName === "panelacmezük") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      const sarkAdi = interaction.options.getString("şarkı");
+
+      const embed = new EmbedBuilder()
+        .setColor(0x1abc9c)
+        .setTitle("🎧 Kesintisiz Müzik Paneli")
+        .setDescription(`Bu panel üzerinden botu ses kanalına çağırıp **${sarkAdi}** şarkısını sürekli çalmasını sağlayabilirsin!`)
+        .setFooter({ text: `${BOT_NAME} • Sürekli Müzik` });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`play_continuous_${sarkAdi}`).setLabel("Sesi Aç ve Müziği Başlat").setStyle(ButtonStyle.Success).setEmoji("▶️"),
+        new ButtonBuilder().setCustomId("music_stop").setLabel("Kapat/Ayrıl").setStyle(ButtonStyle.Danger).setEmoji("⏹️")
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+      return interaction.reply({ content: `✅ Sürekli müzik paneli ${channel} kanalına kuruldu!`, ephemeral: true });
+    }
+
     if (interaction.commandName === "ticket-kur") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yönetici olmalısın.", ephemeral: true });
       const channel = interaction.options.getChannel("kanal");
@@ -441,6 +501,12 @@ client.on("interactionCreate", async interaction => {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
       settings.mcSohbetChannel = interaction.options.getChannel("kanal").id;
       return interaction.reply({ content: "✅ Minecraft sohbet kanalı ayarlandı.", ephemeral: true });
+    }
+
+    if (interaction.commandName === "yapayzrakakal") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "Yetkin yok.", ephemeral: true });
+      settings.aiChannel = interaction.options.getChannel("kanal").id;
+      return interaction.reply({ content: "✅ Yapay zeka sohbet kanalı başarıyla ayarlandı!", ephemeral: true });
     }
 
     if (interaction.commandName === "çal") {
@@ -518,6 +584,46 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: "❌ Bot zaten ses kanalında değil.", ephemeral: true });
     }
 
+    if (interaction.customId.startsWith("play_continuous_")) {
+      const query = interaction.customId.replace("play_continuous_", "");
+      const member = interaction.member;
+      const channel = member.voice.channel;
+
+      if (!channel) return interaction.reply({ content: "❌ Bu paneli kullanabilmek için önce bir ses kanalına girmelisin!", ephemeral: true });
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        const stream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+        const resource = createAudioResource(stream);
+        const player = createAudioPlayer();
+
+        const connection = joinVoiceChannel({
+          channelId: channel.id,
+          guildId: interaction.guild.id,
+          adapterCreator: interaction.guild.voiceAdapterCreator,
+        });
+
+        connection.subscribe(player);
+        player.play(resource);
+
+        client.activeAudioPlayer = player;
+
+        // Şarkı bittiğinde otomatik tekrar çalması için (Döngü)
+        player.on(AudioPlayerStatus.Idle, () => {
+          try {
+            const newStream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+            const newResource = createAudioResource(newStream);
+            player.play(newResource);
+          } catch {}
+        });
+
+        return interaction.editReply({ content: `🎧 Bot ses kanalına katıldı ve **${query}** kesintisiz çalmaya başladı!` });
+      } catch (e) {
+        return interaction.editReply({ content: "❌ Şarkı açılırken bir hata oluştu veya link geçersiz." });
+      }
+    }
+
     if (interaction.customId.startsWith("create_ticket_")) {
       const userOpenTickets = interaction.guild.channels.cache.filter(
         ch => ch.name.startsWith("ticket-") && ch.permissionOverwrites.cache.has(interaction.user.id)
@@ -547,7 +653,7 @@ client.on("interactionCreate", async interaction => {
       );
       
       await ticketChan.send({ 
-        content: `👋 Merhaba ${interaction.user}! <@&${roleId}> ekibimiz (en güvendiğiniz, cana yakın ve çalışkan kadromuz) seninle ilgilenmek için birazdan burada olacak.\n🚀 **Çok yakında harika yenilikler ve sürprizlerle geliyoruz, takipte kalın!**`, 
+        content: `👋 Merhaba ${interaction.user}! <@&${roleId}> ekibimiz seninle ilgilenmek için birazdan burada olacak.\n🚀 **Çok yakında harika yenilikler ve sürprizlerle geliyoruz, takipte kalın!**`, 
         components: [row] 
       });
       
