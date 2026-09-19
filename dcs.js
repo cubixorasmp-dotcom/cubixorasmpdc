@@ -39,6 +39,8 @@ const BOT_NAME = "Cubixorasmp";
 
 const MC_IP = "cubixorasmp.play.hosting";
 const MC_BEDROCK_PORT = "19132";
+const JAVA_VERSION = "1.16.5 - 26.2";
+const BEDROCK_VERSION = "1.26+";
 
 const guildSettings = new Map();
 const guildOwners = new Map();
@@ -51,7 +53,7 @@ function getSettings(guildId) {
       dcCezaChannel: null,
       mcCezaChannel: null,
       mcSohbetChannel: null,
-      protectedRoles: [] // Korumalı roller listesi
+      protectedRoles: []
     });
   }
   return guildSettings.get(guildId);
@@ -64,7 +66,6 @@ function getOwners(guildId) {
   return guildOwners.get(guildId);
 }
 
-// Süre çevirici yardımcı fonksiyon (örn: 30m, 1h)
 function parseDuration(text) {
   if (!text) return null;
   const match = text.toLowerCase().match(/^(\d+)(s|sn|m|dk|h|sa|d|g)$/);
@@ -81,28 +82,24 @@ function parseDuration(text) {
 }
 
 const slashCommands = [
-  new SlashCommandBuilder().setName("ip").setDescription("Sunucu IP bilgilerini gösterir"),
+  new SlashCommandBuilder().setName("ip").setDescription("Sunucu IP ve Sürüm bilgilerini gösterir"),
   new SlashCommandBuilder().setName("hoşgeldin-kanal").setDescription("Hoşgeldin kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("gülegüle-kanal").setDescription("Güle güle kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("dc-ceza").setDescription("Discord ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("mc-ceza").setDescription("Minecraft ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("mcsohbet").setDescription("Minecraft sohbet/giriş-çıkış log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   
-  // Owner Komutları
   new SlashCommandBuilder().setName("owner-ekle").setDescription("Sunucuya yeni bir owner ekler").addUserOption(o => o.setName("uye").setDescription("Owner yapılacak üye").setRequired(true)),
   new SlashCommandBuilder().setName("owner-çıkar").setDescription("Sunucudaki bir owner'ı çıkarır").addUserOption(o => o.setName("uye").setDescription("Ownerlıktan çıkarılacak üye").setRequired(true)),
   new SlashCommandBuilder().setName("owner-list").setDescription("Sunucudaki owner'ları listeler"),
 
-  // Korumalı Rol Komutları (/korma-ekle vb.)
   new SlashCommandBuilder().setName("korma-ekle").setDescription("Korunacak rolü sisteme ekler").addRoleOption(o => o.setName("rol").setDescription("Korunacak Rol").setRequired(true)),
   new SlashCommandBuilder().setName("korma-cikar").setDescription("Korunacak rolü sistemden çıkarır").addRoleOption(o => o.setName("rol").setDescription("Kaldırılacak Rol").setRequired(true)),
   new SlashCommandBuilder().setName("korma-list").setDescription("Korumalı rolleri listeler"),
 
-  // Ban ve Mute Komutları
   new SlashCommandBuilder().setName("ban").setDescription("Kullanıcıyı sunucudan yasaklar").addUserOption(o => o.setName("uye").setDescription("Yasaklanacak üye").setRequired(true)).addStringOption(o => o.setName("sebep").setDescription("Sebep").setRequired(false)),
   new SlashCommandBuilder().setName("mute").setDescription("Kullanıcıyı susturur").addUserOption(o => o.setName("uye").setDescription("Susturulacak üye").setRequired(true)).addStringOption(o => o.setName("süre").setDescription("Süre (örn: 30m, 1h)").setRequired(true)).addStringOption(o => o.setName("sebep").setDescription("Sebep").setRequired(false)),
 
-  // Ticket Kur Komutu
   new SlashCommandBuilder().setName("ticket-kur")
     .setDescription("Ticket sistemi kurar")
     .addChannelOption(o => o.setName("kanal").setDescription("Kurulacak Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true))
@@ -110,7 +107,6 @@ const slashCommands = [
     .addStringOption(o => o.setName("baslik").setDescription("Ticket Panel Başlığı").setRequired(true))
     .addStringOption(o => o.setName("aciklama").setDescription("Ticket Panel Açıklaması").setRequired(true)),
 
-  // Müzik Paneli ve Komutları
   new SlashCommandBuilder().setName("müzikpanelyarat").setDescription("Butonlu müzik kontrol paneli kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("çal").setDescription("Müzik çalar").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki").setRequired(true)),
   new SlashCommandBuilder().setName("durdur").setDescription("Çalan müziği durdurur/oynatır"),
@@ -131,7 +127,6 @@ client.once("ready", async () => {
   }
 });
 
-// Üye Katılma / Ayrılma Olayları
 client.on("guildMemberAdd", async member => {
   const settings = getSettings(member.guild.id);
   if (settings.mcSohbetChannel) {
@@ -171,7 +166,6 @@ client.on("guildMemberRemove", async member => {
   channel.send({ embeds: [embed] });
 });
 
-// Mesaj Denetimleri, Korumalı Rol Etiket Koruması & Prefix Komutları
 client.on("messageCreate", async message => {
   if (!message.guild || message.author.bot) return;
   const settings = getSettings(message.guild.id);
@@ -182,7 +176,6 @@ client.on("messageCreate", async message => {
     return message.reply("Aleyküm Selam, hoş geldin! 👋");
   }
 
-  // Korumalı Rol Etiketleme Koruması
   if (settings.protectedRoles && settings.protectedRoles.length > 0) {
     const mentionedRoles = message.mentions.roles;
     const isProtectedTagged = mentionedRoles.some(role => settings.protectedRoles.includes(role.id));
@@ -206,7 +199,6 @@ client.on("messageCreate", async message => {
     }
   }
 
-  // Reklam Koruması (Otomatik 1 Gün Mute + Mesaj Silme)
   const inviteRegex = /(https?:\/\/)?(www\.)?(discord\.(gg|io|me|li|club)|discord\.com\/invite)\/.+$/i;
   const linkRegex = /https?:\/\/[^\s]+/i;
   if (inviteRegex.test(content) || linkRegex.test(content)) {
@@ -229,13 +221,11 @@ client.on("messageCreate", async message => {
     }
   }
 
-  // Prefix Komutları (e!owner)
   if (lower === "e!owner") {
     const owners = getOwners(message.guild.id);
     if (owners.length === 0) {
       return message.reply("⚠️ Bu sunucuda henüz kayıtlı bir owner bulunmuyor. (Yönetici `/owner-ekle` komutuyla ekleyebilir)");
     }
-
     const ownerTags = owners.map(id => `<@${id}>`).join("\n");
     const embed = new EmbedBuilder()
       .setColor(0xf1c40f)
@@ -243,7 +233,6 @@ client.on("messageCreate", async message => {
       .setDescription(ownerTags)
       .setFooter({ text: `${BOT_NAME} • Owner Listesi` })
       .setTimestamp();
-
     return message.reply({ embeds: [embed] });
   }
 
@@ -267,13 +256,17 @@ client.on("messageCreate", async message => {
   }
 
   if (command === "ip") {
-    const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle("🌍 CubixoraSMP IP Bilgisi")
-      .addFields({ name: "☕ Java", value: `\`${MC_IP}\`` }, { name: "📱 Bedrock", value: `\`${MC_IP}\` : \`${MC_BEDROCK_PORT}\`` });
+    const embed = new EmbedBuilder()
+      .setColor(0x2ecc71)
+      .setTitle("🌍 CubixoraSMP IP ve Sürüm Bilgisi")
+      .addFields(
+        { name: "☕ Java Sürüm & IP", value: `IP: \`${MC_IP}\`\nSürüm: \`${JAVA_VERSION}\`` },
+        { name: "📱 Bedrock Sürüm, IP & Port", value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nSürüm: \`${BEDROCK_VERSION}\`` }
+      );
     return message.reply({ embeds: [embed] });
   }
 });
 
-// Slash ve Buton Etkileşimleri
 client.on("interactionCreate", async interaction => {
   if (interaction.isChatInputCommand()) {
     const guild = interaction.guild;
@@ -281,12 +274,16 @@ client.on("interactionCreate", async interaction => {
     const settings = getSettings(guild.id);
 
     if (interaction.commandName === "ip") {
-      const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle("🌍 CubixoraSMP IP Bilgisi")
-        .addFields({ name: "☕ Java", value: `\`${MC_IP}\`` }, { name: "📱 Bedrock", value: `\`${MC_IP}\` : \`${MC_BEDROCK_PORT}\`` });
+      const embed = new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle("🌍 CubixoraSMP IP ve Sürüm Bilgisi")
+        .addFields(
+          { name: "☕ Java Sürüm & IP", value: `IP: \`${MC_IP}\`\nSürüm: \`${JAVA_VERSION}\`` },
+          { name: "📱 Bedrock Sürüm, IP & Port", value: `IP: \`${MC_IP}\`\nPort: \`${MC_BEDROCK_PORT}\`\nSürüm: \`${BEDROCK_VERSION}\`` }
+        );
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    // Owner Komutları
     if (interaction.commandName === "owner-ekle") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
       const targetUser = interaction.options.getUser("uye");
@@ -313,7 +310,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [embed] });
     }
 
-    // Korumalı Rol Komutları (/korma-ekle vb.)
     if (interaction.commandName === "korma-ekle") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
       const role = interaction.options.getRole("rol");
@@ -337,7 +333,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [embed] });
     }
 
-    // Ban Komutu (/ban)
     if (interaction.commandName === "ban") {
       if (!member.permissions.has(PermissionsBitField.Flags.BanMembers)) return interaction.reply({ content: "❌ Üyeleri Yasakla yetkin yok.", ephemeral: true });
       const targetUser = interaction.options.getUser("uye");
@@ -363,7 +358,6 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    // Mute Komutu (/mute)
     if (interaction.commandName === "mute") {
       if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return interaction.reply({ content: "❌ Üyeleri Sustur yetkin yok.", ephemeral: true });
       const targetUser = interaction.options.getUser("uye");
@@ -392,7 +386,6 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    // Müzik Paneli Yaratma Komutu
     if (interaction.commandName === "müzikpanelyarat") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
       const channel = interaction.options.getChannel("kanal");
@@ -464,7 +457,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: "✅ Minecraft sohbet kanalı ayarlandı.", ephemeral: true });
     }
 
-    // Müzik Çal Komutu
     if (interaction.commandName === "çal") {
       const channel = member.voice.channel;
       if (!channel) return interaction.reply({ content: "❌ Önce bir ses kanalına girmelisin!", ephemeral: true });
@@ -486,7 +478,7 @@ client.on("interactionCreate", async interaction => {
         connection.subscribe(player);
         player.play(resource);
 
-        client.activeAudioPlayer = player; // Butonlar için player kaydı
+        client.activeAudioPlayer = player;
 
         return interaction.editReply(`🎶 Çalınıyor: **${query}**`);
       } catch (e) {
@@ -517,9 +509,7 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
-  // Buton Etkileşimleri (Ticket ve Müzik Paneli Butonları)
   if (interaction.isButton()) {
-    // Müzik Paneli Butonları
     if (interaction.customId === "music_pause") {
       if (client.activeAudioPlayer) {
         if (client.activeAudioPlayer.state.status === AudioPlayerStatus.Playing) {
@@ -542,7 +532,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: "❌ Bot zaten ses kanalında değil.", ephemeral: true });
     }
 
-    // Ticket Paneli Butonları
     if (interaction.customId.startsWith("create_ticket_")) {
       const userOpenTickets = interaction.guild.channels.cache.filter(
         ch => ch.name.startsWith("ticket-") && ch.permissionOverwrites.cache.has(interaction.user.id)
