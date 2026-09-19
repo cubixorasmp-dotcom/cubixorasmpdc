@@ -1,15 +1,11 @@
 {
-  "name": "cubixorasmp-bot",
+  "name": "cubixorasmp",
   "version": "1.0.0",
-  "description": "CubixoraSMP Discord ve Yönetim Botu",
-  "main": "dcs.js",
-  "scripts": {
-    "start": "node dcs.js"
-  },
   "dependencies": {
-    "@discordjs/voice": "^0.17.0",
-    "@distube/ytdl-core": "^4.15.8",
+    "@discordjs/voice": "^0.16.1",
+    "@distube/ytdl-core": "^4.13.5",
     "discord.js": "^14.14.1",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "minecraft-server-util": "^5.4.1"
   }
 }
