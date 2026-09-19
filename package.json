@@ -1,7 +1,6 @@
 {
-  "name": "cubixorasmp-bot",
+  "name": "bot",
   "version": "1.0.0",
-  "description": "Discord ve Minecraft entegre bot",
   "main": "dcs.js",
   "scripts": {
     "start": "node dcs.js"
