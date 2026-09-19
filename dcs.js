@@ -21,6 +21,7 @@ const {
   AudioPlayerStatus 
 } = require("@discordjs/voice");
 const ytdl = require("@distube/ytdl-core");
+const util = require("minecraft-server-util");
 
 const client = new Client({
   intents: [
@@ -38,7 +39,7 @@ const PREFIX = "e!";
 const BOT_NAME = "Cubixorasmp";
 
 const MC_IP = "cubixorasmp.play.hosting";
-const MC_BEDROCK_PORT = "19132";
+const MC_BEDROCK_PORT = 19132;
 const JAVA_VERSION = "1.16.5 - 26.2";
 const BEDROCK_VERSION = "1.26+";
 
@@ -83,6 +84,7 @@ function parseDuration(text) {
 
 const slashCommands = [
   new SlashCommandBuilder().setName("ip").setDescription("Sunucu IP ve Sürüm bilgilerini gösterir"),
+  new SlashCommandBuilder().setName("restart").setDescription("Botu yeniden başlatır (Yalnızca Yöneticiler)"),
   new SlashCommandBuilder().setName("hoşgeldin-kanal").setDescription("Hoşgeldin kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("gülegüle-kanal").setDescription("Güle güle kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("dc-ceza").setDescription("Discord ceza log kanalını ayarlar").addChannelOption(o => o.setName("kanal").setDescription("Kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
@@ -96,9 +98,6 @@ const slashCommands = [
   new SlashCommandBuilder().setName("korma-ekle").setDescription("Korunacak rolü sisteme ekler").addRoleOption(o => o.setName("rol").setDescription("Korunacak Rol").setRequired(true)),
   new SlashCommandBuilder().setName("korma-cikar").setDescription("Korunacak rolü sistemden çıkarır").addRoleOption(o => o.setName("rol").setDescription("Kaldırılacak Rol").setRequired(true)),
   new SlashCommandBuilder().setName("korma-list").setDescription("Korumalı rolleri listeler"),
-
-  new SlashCommandBuilder().setName("ban").setDescription("Kullanıcıyı sunucudan yasaklar").addUserOption(o => o.setName("uye").setDescription("Yasaklanacak üye").setRequired(true)).addStringOption(o => o.setName("sebep").setDescription("Sebep").setRequired(false)),
-  new SlashCommandBuilder().setName("mute").setDescription("Kullanıcıyı susturur").addUserOption(o => o.setName("uye").setDescription("Susturulacak üye").setRequired(true)).addStringOption(o => o.setName("süre").setDescription("Süre (örn: 30m, 1h)").setRequired(true)).addStringOption(o => o.setName("sebep").setDescription("Sebep").setRequired(false)),
 
   new SlashCommandBuilder().setName("ticket-kur")
     .setDescription("Ticket sistemi kurar")
@@ -116,7 +115,7 @@ const slashCommands = [
 client.once("ready", async () => {
   console.log(`${BOT_NAME} aktif!`);
   client.user.setPresence({
-    activities: [{ name: "CubixoraSMP | !ip", type: ActivityType.Watching }],
+    activities: [{ name: "CubixoraSMP | !ip ve !aktif", type: ActivityType.Watching }],
     status: "online"
   });
 
@@ -176,64 +175,36 @@ client.on("messageCreate", async message => {
     return message.reply("Aleyküm Selam, hoş geldin! 👋");
   }
 
-  if (settings.protectedRoles && settings.protectedRoles.length > 0) {
-    const mentionedRoles = message.mentions.roles;
-    const isProtectedTagged = mentionedRoles.some(role => settings.protectedRoles.includes(role.id));
-
-    if (isProtectedTagged && !message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-      try {
-        await message.delete();
-        await message.member.timeout(30 * 60 * 1000, "Korumalı Rolü Etiketleme");
-        message.channel.send(`⚠️ ${message.author}, korumalı bir rolü etiketlediğin için mesajın silindi ve **30 dakika** susturuldun!`).then(m => setTimeout(() => m.delete().catch(()=>{}), 5000));
-        
-        if (settings.dcCezaChannel) {
-          const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
-          if (logChan) {
-            const embed = new EmbedBuilder().setColor(0xed4245).setTitle("🚨 KORUMALI ROL ETİKETLEME CEZASI")
-              .addFields({ name: "👤 Üye", value: `${message.author}` }, { name: "Ceza", value: "Mesaj Silindi + 30dk Mute" }).setTimestamp();
-            logChan.send({ embeds: [embed] });
-          }
-        }
-      } catch {}
-      return;
+  if (lower === "!aktif") {
+    const loadingMsg = await message.reply("🔍 Minecraft sunucu durumu kontrol ediliyor...");
+    try {
+      const response = await util.status(MC_IP, 25565, { timeout: 3000 });
+      const embed = new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle("🟢 CubixoraSMP — Sunucu Durumu")
+        .addFields(
+          { name: "Durum", value: "🟢 **Aktif (Çevrimiçi)**", inline: true },
+          { name: "Aktif Oyuncu", value: `👥 **${response.players.online} /${response.players.max}**`, inline: true },
+          { name: "Sürüm", value: `☕ \`${JAVA_VERSION}\` / 📱 \`${BEDROCK_VERSION}\``, inline: false },
+          { name: "IP Adresi", value: `\`${MC_IP}\``, inline: true },
+          { name: "Bedrock Port", value: `\`${MC_BEDROCK_PORT}\``, inline: true }
+        )
+        .setFooter({ text: `${BOT_NAME} • Canlı Sunucu Durumu` })
+        .setTimestamp();
+      return loadingMsg.edit({ content: null, embeds: [embed] });
+    } catch (e) {
+      const embed = new EmbedBuilder()
+        .setColor(0xed4245)
+        .setTitle("🔴 CubixoraSMP — Sunucu Durumu")
+        .addFields(
+          { name: "Durum", value: "🔴 **Kapalı veya Bakımda**", inline: true },
+          { name: "Açıklama", value: "Sunucu şu anda kapalı olabilir veya bakım aşamasındadır. Lütfen daha sonra tekrar deneyin.", inline: false },
+          { name: "IP Adresi", value: `\`${MC_IP}\``, inline: true }
+        )
+        .setFooter({ text: `${BOT_NAME} • Sunucu Kapalı` })
+        .setTimestamp();
+      return loadingMsg.edit({ content: null, embeds: [embed] });
     }
-  }
-
-  const inviteRegex = /(https?:\/\/)?(www\.)?(discord\.(gg|io|me|li|club)|discord\.com\/invite)\/.+$/i;
-  const linkRegex = /https?:\/\/[^\s]+/i;
-  if (inviteRegex.test(content) || linkRegex.test(content)) {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-      try {
-        await message.delete();
-        await message.member.timeout(24 * 60 * 60 * 1000, "Reklam / İzinsiz Link");
-        message.channel.send(`⚠️ ${message.author}, reklam/link paylaştığın için mesajın silindi ve **1 gün** susturuldun!`).then(m => setTimeout(() => m.delete().catch(()=>{}), 5000));
-        
-        if (settings.dcCezaChannel) {
-          const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
-          if (logChan) {
-            const embed = new EmbedBuilder().setColor(0xed4245).setTitle("🚨 OTOMATİK CEZA — REKLAM")
-              .addFields({ name: "👤 Üye", value: `${message.author}` }, { name: "Sebep", value: "İzinsiz Link" }).setTimestamp();
-            logChan.send({ embeds: [embed] });
-          }
-        }
-      } catch {}
-      return;
-    }
-  }
-
-  if (lower === "e!owner") {
-    const owners = getOwners(message.guild.id);
-    if (owners.length === 0) {
-      return message.reply("⚠️ Bu sunucuda henüz kayıtlı bir owner bulunmuyor. (Yönetici `/owner-ekle` komutuyla ekleyebilir)");
-    }
-    const ownerTags = owners.map(id => `<@${id}>`).join("\n");
-    const embed = new EmbedBuilder()
-      .setColor(0xf1c40f)
-      .setTitle(`👑 ${message.guild.name} — Sunucu Ownerları`)
-      .setDescription(ownerTags)
-      .setFooter({ text: `${BOT_NAME} • Owner Listesi` })
-      .setTimestamp();
-    return message.reply({ embeds: [embed] });
   }
 
   let usedPrefix = content.startsWith(PREFIX) ? PREFIX : (content.startsWith("!") ? "!" : null);
@@ -243,15 +214,71 @@ client.on("messageCreate", async message => {
   const command = args.shift()?.toLowerCase();
 
   if (command === "sil") {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("Yetkin yok.");
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("❌ Bu komut için Mesajları Yönet yetkin olmalı.");
     const count = parseInt(args[0]);
-    if (!count || count < 1 || count > 1000) return message.reply("1 ile 1000 arası sayı gir.");
+    if (!count || count < 1 || count > 100) return message.reply("⚠️ Lütfen 1 ile 100 arasında bir sayı gir.");
     try {
       await message.channel.bulkDelete(count, true);
-      const m = await message.channel.send(`✅ **${count}** mesaj silindi.`);
+      const m = await message.channel.send(`✅ **${count}** adet mesaj silindi.`);
       setTimeout(() => m.delete().catch(() => {}), 4000);
     } catch {
-      message.reply("Mesajlar silinemedi.");
+      message.reply("❌ Mesajlar silinemedi (14 günden eski mesajlar toplu silinemez).");
+    }
+  }
+
+  if (command === "ban") {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("❌ Üyeleri Yasakla yetkin yok.");
+    const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    if (!targetMember) return message.reply("⚠️ Lütfen banlanacak üyeyi etiketle (`!ban @kullanıcı [sebep]`).");
+    
+    args.shift();
+    const sebep = args.join(" ") || "Sebep belirtilmedi";
+
+    if (!targetMember.bannable) return message.reply("❌ Bu kullanıcıyı banlayamam (Yetkisi benden üstün).");
+
+    try {
+      await targetMember.ban({ reason: sebep });
+      message.reply(`✅ **${targetMember.user.tag}** sunucudan banlandı.`);
+
+      if (settings.dcCezaChannel) {
+        const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
+        if (logChan) {
+          const embed = new EmbedBuilder().setColor(0xed4245).setTitle("🔨 YETKİLİ BAN")
+            .addFields({ name: "👤 Banlanan", value: `${targetMember.user}` }, { name: "🛡️ Yetkili", value: `${message.author}` }, { name: "Sebep", value: sebep }).setTimestamp();
+          logChan.send({ embeds: [embed] });
+        }
+      }
+    } catch (e) {
+      message.reply("❌ Ban işlemi başarısız oldu.");
+    }
+  }
+
+  if (command === "mute") {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
+    const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    if (!targetMember) return message.reply("⚠️ Kullanım: `!mute @kullanıcı [süre örn: 30m] [sebep]`");
+
+    args.shift();
+    const süreStr = args.shift();
+    const sebep = args.join(" ") || "Sebep belirtilmedi";
+
+    const msDuration = parseDuration(süreStr);
+    if (!msDuration) return message.reply("❌ Geçersiz süre formatı! (Örn: `30m`, `1h`, `1d`)");
+
+    try {
+      await targetMember.timeout(msDuration, sebep);
+      message.reply(`✅ **${targetMember.user.tag}** başarıyla **${süreStr}** süreyle susturuldu.`);
+
+      if (settings.dcCezaChannel) {
+        const logChan = message.guild.channels.cache.get(settings.dcCezaChannel);
+        if (logChan) {
+          const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle("🔇 YETKİLİ MUTE (SUSTURMA)")
+            .addFields({ name: "👤 Susturulan", value: `${targetMember.user}` }, { name: "Süre", value: süreStr }, { name: "Yetkili", value: `${message.author}` }, { name: "Sebep", value: sebep }).setTimestamp();
+          logChan.send({ embeds: [embed] });
+        }
+      }
+    } catch (e) {
+      message.reply("❌ Susturma işlemi başarısız oldu.");
     }
   }
 
@@ -272,6 +299,18 @@ client.on("interactionCreate", async interaction => {
     const guild = interaction.guild;
     const member = interaction.member;
     const settings = getSettings(guild.id);
+
+    if (interaction.commandName === "restart") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        return interaction.reply({ content: "❌ Bu komutu yalnızca **Yöneticiler** kullanabilir!", ephemeral: true });
+      }
+      await interaction.reply({ content: "🔄 Bot yeniden başlatılıyor..." });
+      console.log(`[RESTART] ${member.user.tag} tarafından bot yeniden başlatıldı.`);
+      setTimeout(() => {
+        process.exit(0);
+      }, 1000);
+      return;
+    }
 
     if (interaction.commandName === "ip") {
       const embed = new EmbedBuilder()
@@ -333,59 +372,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [embed] });
     }
 
-    if (interaction.commandName === "ban") {
-      if (!member.permissions.has(PermissionsBitField.Flags.BanMembers)) return interaction.reply({ content: "❌ Üyeleri Yasakla yetkin yok.", ephemeral: true });
-      const targetUser = interaction.options.getUser("uye");
-      const sebep = interaction.options.getString("sebep") || "Sebep belirtilmedi";
-      const targetMember = await guild.members.fetch(targetUser.id).catch(() => null);
-
-      if (targetMember && !targetMember.bannable) return interaction.reply({ content: "❌ Bu kullanıcıyı banlayamam (Yetkisi benden üstün).", ephemeral: true });
-
-      try {
-        await guild.members.ban(targetUser.id, { reason: sebep });
-        interaction.reply({ content: `✅ **${targetUser.tag}** sunucudan banlandı. Sebep: ${sebep}` });
-
-        if (settings.dcCezaChannel) {
-          const logChan = guild.channels.cache.get(settings.dcCezaChannel);
-          if (logChan) {
-            const embed = new EmbedBuilder().setColor(0xed4245).setTitle("🔨 YETKİLİ BAN")
-              .addFields({ name: "👤 Banlanan", value: `${targetUser}` }, { name: "🛡️ Yetkili", value: `${member}` }, { name: "Sebep", value: sebep }).setTimestamp();
-            logChan.send({ embeds: [embed] });
-          }
-        }
-      } catch (e) {
-        interaction.reply({ content: "❌ Ban işlemi başarısız oldu.", ephemeral: true });
-      }
-    }
-
-    if (interaction.commandName === "mute") {
-      if (!member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return interaction.reply({ content: "❌ Üyeleri Sustur yetkin yok.", ephemeral: true });
-      const targetUser = interaction.options.getUser("uye");
-      const süreStr = interaction.options.getString("süre");
-      const sebep = interaction.options.getString("sebep") || "Sebep belirtilmedi";
-      const targetMember = await guild.members.fetch(targetUser.id).catch(() => null);
-
-      if (!targetMember) return interaction.reply({ content: "❌ Kullanıcı bulunamadı.", ephemeral: true });
-      const msDuration = parseDuration(süreStr);
-      if (!msDuration) return interaction.reply({ content: "❌ Geçersiz süre formatı! (Örn: `30m`, `1h`, `1d`)", ephemeral: true });
-
-      try {
-        await targetMember.timeout(msDuration, sebep);
-        interaction.reply({ content: `✅ **${targetUser.tag}** başarıyla **${süreStr}** süreyle susturuldu.` });
-
-        if (settings.dcCezaChannel) {
-          const logChan = guild.channels.cache.get(settings.dcCezaChannel);
-          if (logChan) {
-            const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle("🔇 YETKİLİ MUTE (SUSTURMA)")
-              .addFields({ name: "👤 Susturulan", value: `${targetUser}` }, { name: "Süre", value: süreStr }, { name: "Yetkili", value: `${member}` }, { name: "Sebep", value: sebep }).setTimestamp();
-            logChan.send({ embeds: [embed] });
-          }
-        }
-      } catch (e) {
-        interaction.reply({ content: "❌ Susturma işlemi başarısız oldu.", ephemeral: true });
-      }
-    }
-
     if (interaction.commandName === "müzikpanelyarat") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
       const channel = interaction.options.getChannel("kanal");
@@ -393,7 +379,7 @@ client.on("interactionCreate", async interaction => {
       const embed = new EmbedBuilder()
         .setColor(0x9b59b6)
         .setTitle("🎶 CubixoraSMP Müzik Paneli")
-        .setDescription("Aşağıdaki butonları kullanarak ses kanalında müziği durdurabilir, devam ettirebilir veya bottan ayrılmasını sağlayabilirsin!\n\n*(Şarkı çalmak için `/çal [şarkı adı]` komutunu kullanabilirsin)*")
+        .setDescription("Aşağıdaki butonları kullanarak ses kanalında müziği durdurabilir, devam ettirebilir veya bottan ayrılmasını sağlayabilirsin!")
         .setFooter({ text: `${BOT_NAME} • Müzik Sistemi` });
 
       const row = new ActionRowBuilder().addComponents(
