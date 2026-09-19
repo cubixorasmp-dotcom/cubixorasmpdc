@@ -43,10 +43,10 @@ const MC_BEDROCK_PORT = 19132;
 const JAVA_VERSION = "1.16.5 - 26.2";
 const BEDROCK_VERSION = "1.26+";
 
-// Rastgele çalınacak varsayılan şarkı havuzu (İstediğin YouTube linklerini buraya ekleyebilirsin)
+// Rastgele çalınacak varsayılan şarkı havuzu
 const randomPlaylist = [
-  "https://www.youtube.com/watch?v=5qap5aO4i9A", // Örnek lofi
-  "https://www.youtube.com/watch?v=jfKfPfyJRdk", // Örnek lofi 2
+  "https://www.youtube.com/watch?v=5qap5aO4i9A",
+  "https://www.youtube.com/watch?v=jfKfPfyJRdk",
   "Lo-fi hip hop radio"
 ];
 
@@ -81,7 +81,6 @@ const slashCommands = [
   new SlashCommandBuilder().setName("müzikpanelyarat").setDescription("Butonlu müzik kontrol paneli kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)),
   new SlashCommandBuilder().setName("panelacmezük").setDescription("Ses kanalına katılıp otomatik rastgele müzik çalmaya başlayan özel panel kurar").addChannelOption(o => o.setName("kanal").setDescription("Panelin kurulacağı kanal").addChannelTypes(ChannelType.GuildText).setRequired(true)).addStringOption(o => o.setName("şarkı").setDescription("Özel şarkı (Boş bırakırsan rastgele çalar)").setRequired(false)),
   
-  // BURASI GÜNCELLENDİ: "şarkı" opsiyonu artık zorunlu değil (setRequired(false))
   new SlashCommandBuilder().setName("çal").setDescription("Müzik çalar (Boş bırakılırsa rastgele çalar)").addStringOption(o => o.setName("şarkı").setDescription("Şarkı adı veya YouTube linki (İsteğe bağlı)").setRequired(false)),
   
   new SlashCommandBuilder().setName("durdur").setDescription("Çalan müziği durdurur/oynatır"),
@@ -252,6 +251,48 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
+    if (interaction.commandName === "hoşgeldin-kanal") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      getSettings(guild.id).welcomeChannel = channel.id;
+      return interaction.reply({ content: `✅ Hoşgeldin kanalı ${channel} olarak ayarlandı.`, ephemeral: true });
+    }
+
+    if (interaction.commandName === "gülegüle-kanal") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      getSettings(guild.id).goodbyeChannel = channel.id;
+      return interaction.reply({ content: `✅ Güle güle kanalı ${channel} olarak ayarlandı.`, ephemeral: true });
+    }
+
+    if (interaction.commandName === "dc-ceza") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      getSettings(guild.id).dcCezaChannel = channel.id;
+      return interaction.reply({ content: `✅ DC ceza kanalı ${channel} olarak ayarlandı.`, ephemeral: true });
+    }
+
+    if (interaction.commandName === "mc-ceza") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      getSettings(guild.id).mcCezaChannel = channel.id;
+      return interaction.reply({ content: `✅ MC ceza kanalı ${channel} olarak ayarlandı.`, ephemeral: true });
+    }
+
+    if (interaction.commandName === "mcsohbet") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      getSettings(guild.id).mcSohbetChannel = channel.id;
+      return interaction.reply({ content: `✅ Minecraft sohbet kanalı ${channel} olarak ayarlandı.`, ephemeral: true });
+    }
+
+    if (interaction.commandName === "yapayzrakakal") {
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
+      const channel = interaction.options.getChannel("kanal");
+      getSettings(guild.id).aiChannel = channel.id;
+      return interaction.reply({ content: `✅ Yapay zeka kanalı ${channel} olarak ayarlandı.`, ephemeral: true });
+    }
+
     if (interaction.commandName === "müzikpanelyarat") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
       const channel = interaction.options.getChannel("kanal");
@@ -291,12 +332,10 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: `✅ Otomatik rastgele müzik paneli ${channel} kanalına kuruldu!`, ephemeral: true });
     }
 
-    // /çal KOMUTU GÜNCELLENDİ
     if (interaction.commandName === "çal") {
       const channel = member.voice.channel;
       if (!channel) return interaction.reply({ content: "❌ Önce bir ses kanalına girmelisin!", ephemeral: true });
 
-      // Eğer kullanıcı şarkı adı yazmadıysa rastgele listeden seç
       let query = interaction.options.getString("şarkı");
       if (!query) {
         query = randomPlaylist[Math.floor(Math.random() * randomPlaylist.length)];
@@ -319,7 +358,6 @@ client.on("interactionCreate", async interaction => {
         player.play(resource);
         client.activeAudioPlayer = player;
 
-        // Şarkı bittiğinde otomatik olarak başka bir rastgele şarkıya geç
         player.on(AudioPlayerStatus.Idle, () => {
           try {
             const nextQuery = randomPlaylist[Math.floor(Math.random() * randomPlaylist.length)];
