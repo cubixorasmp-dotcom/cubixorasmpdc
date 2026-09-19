@@ -1,8 +1,17 @@
-"dependencies": {
-  "@distube/ytdl-core": "^1.3.5",
-  "@discordjs/voice": "^0.16.1",
-  "discord.js": "^14.14.1",
-  "dotenv": "^16.4.5",
-  "express": "^4.19.2",
-  "minecraft-server-util": "^5.5.0"
+{
+  "name": "cubixorasmp-bot",
+  "version": "1.0.0",
+  "description": "Discord ve Minecraft entegre bot",
+  "main": "dcs.js",
+  "scripts": {
+    "start": "node dcs.js"
+  },
+  "dependencies": {
+    "@distube/ytdl-core": "^1.3.5",
+    "@discordjs/voice": "^0.16.1",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "minecraft-server-util": "^5.5.0"
+  }
 }
