@@ -54,7 +54,7 @@ function getSettings(guildId) {
       dcCezaChannel: null,
       mcCezaChannel: null,
       mcSohbetChannel: null,
-      aiChannel: null, // Yapay zeka kanalı
+      aiChannel: null,
       protectedRoles: []
     });
   }
@@ -174,7 +174,6 @@ client.on("messageCreate", async message => {
   const content = message.content;
   const lower = content.toLowerCase().trim();
 
-  // Yapay Zeka Kanalı Kontrolü
   if (settings.aiChannel && message.channel.id === settings.aiChannel) {
     const responses = [
       "Anladım, bu konuda sana katılıyorum! 🤖",
@@ -228,6 +227,35 @@ client.on("messageCreate", async message => {
 
   const args = content.slice(usedPrefix.length).trim().split(/\s+/);
   const command = args.shift()?.toLowerCase();
+
+  // YENİ EKLENEN !botses KOMUTU
+  if (command === "botses") {
+    let targetChannel;
+    
+    // Eğer kullanıcı komutun yanına bir kanal ID'si yazdıysa veya etiketlediyse
+    if (args[0]) {
+      const channelId = args[0].replace(/[^0-9]/g, "");
+      targetChannel = message.guild.channels.cache.get(channelId);
+    } else {
+      // Eğer ID yazılmadıysa, komutu yazan kullanıcının ses kanalına bak
+      targetChannel = message.member.voice.channel;
+    }
+
+    if (!targetChannel || targetChannel.type !== ChannelType.GuildVoice) {
+      return message.reply("❌ Lütfen geçerli bir ses kanalına gir veya komutla birlikte bir ses kanalının ID'sini belirt (`!botses [kanal_id]`).");
+    }
+
+    try {
+      joinVoiceChannel({
+        channelId: targetChannel.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator,
+      });
+      return message.reply(`🔊 Başarıyla **${targetChannel.name}** ses kanalına katıldım!`);
+    } catch (e) {
+      return message.reply("❌ Ses kanalına bağlanırken bir hata oluştu.");
+    }
+  }
 
   if (command === "sil") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("❌ Bu komut için Mesajları Yönet yetkin olmalı.");
@@ -298,7 +326,6 @@ client.on("messageCreate", async message => {
     }
   }
 
-  // !unmute komutu (Kişi ismini etiketleyerek mutesini kaldırma)
   if (command === "unmute") {
     if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("❌ Üyeleri Sustur yetkin yok.");
     const targetMember = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
@@ -430,7 +457,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.reply({ content: `✅ Müzik paneli ${channel} kanalına başarıyla kuruldu!`, ephemeral: true });
     }
 
-    // /panelacmezük komutu (Ses kanalına katılıp sürekli müzik çalan özel panel)
     if (interaction.commandName === "panelacmezük") {
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) return interaction.reply({ content: "❌ Yönetici olmalısın.", ephemeral: true });
       const channel = interaction.options.getChannel("kanal");
@@ -609,7 +635,6 @@ client.on("interactionCreate", async interaction => {
 
         client.activeAudioPlayer = player;
 
-        // Şarkı bittiğinde otomatik tekrar çalması için (Döngü)
         player.on(AudioPlayerStatus.Idle, () => {
           try {
             const newStream = ytdl(query, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
