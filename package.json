@@ -1,16 +1,19 @@
 {
-  "name": "bot",
+  "name": "cubixorasmp",
   "version": "1.0.0",
-  "main": "dcs.js",
+  "description": "Discord Bot with Minecraft integration",
+  "main": "index.js",
   "scripts": {
-    "start": "node dcs.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "@distube/ytdl-core": "^1.3.5",
     "@discordjs/voice": "^0.16.1",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.5",
+    "@distube/ytdl-core": "^1.3.3",
+    "discord.js": "^14.14.0",
     "express": "^4.19.2",
     "minecraft-server-util": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
